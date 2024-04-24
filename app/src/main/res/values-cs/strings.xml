@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TRIVIA</string>
+    <string name="quizzes_heading">kvízy</string>
+    <string name="create_quizz_heading">vytvořit kvíz</string>
+    <string name="create_quizz_questions">Otázky</string>
+    <string name="create_quizz_count">Počet</string>
+    <string name="create_quizz_add_question">Přidat otázku</string>
+    <string name="create_quizz_question">Otázka</string>
+    <string name="create_quizz_correct_answer">Správná odpověď</string>
+    <string name="create_quizz_wrong_answer">Špatná odpověď</string>
+    <string name="create_quizz_name">Název</string>
+    <string name="create_quizz_input_error">Všechny kolonky musí být vyplněny.</string>
+    <string name="create_quizz_question_error">Kvíz musí obsahovat alespoň 1 otázku.</string>
+    <string name="quiz_next">Další</string>
+    <string name="quiz_finish">Konec</string>
+</resources>
