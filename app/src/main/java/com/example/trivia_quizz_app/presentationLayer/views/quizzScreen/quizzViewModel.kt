@@ -1,5 +1,6 @@
 package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,7 +14,9 @@ class QuizzViewModel(
 ): ViewModel() {
 
     private val quizzWithQuestions = repository.getQuizzByName(quizzName)
-    private val quizzQuestions = quizzWithQuestions.questions
+    var quizzQuestions = quizzWithQuestions.questions
+    private set
+
     private var currentRound = 0
     var currentQuestion = MutableLiveData(quizzQuestions[0].question)
     var currentCorrectAnswer = MutableLiveData(quizzQuestions[0].correctAnswer)
@@ -25,7 +28,12 @@ class QuizzViewModel(
     var streak = MutableLiveData(0)
     var answerBtnEnabled = MutableLiveData(true)
     var finished = MutableLiveData(false)
+    var correctButtonId = -1
 
+    var btn1Color = MutableLiveData<Color>()
+    var btn2Color = MutableLiveData<Color>()
+    var btn3Color = MutableLiveData<Color>()
+    var btn4Color = MutableLiveData<Color>()
 
     private fun hasNextQuestion(): Boolean {
         return (currentRound) < quizzQuestions.size - 1
@@ -35,7 +43,6 @@ class QuizzViewModel(
     fun nextRound(){
         if (hasNextQuestion()){
             currentRound++
-            revertColor()
             resultShowing.value = false
             answerBtnEnabled.value = true
             updateData()
@@ -50,31 +57,21 @@ class QuizzViewModel(
         currentWrongAnswer3.value = quizzQuestions[currentRound].wrongAnswer3
     }
 
-    fun checkUserAnswer(answer: String, id: Int) {
-        var result = false
-        if (answer == currentCorrectAnswer.value){
-            result = true
-        }
-        showResult(result, id)
+    fun onAnswerClicked(id: Int) {
+        showResult(id)
     }
 
-
-    private fun showResult(correctChoice: Boolean, id: Int){
-        val color = if (correctChoice) Color.Companion.Green else Color.Red
-        // OBARVIT ODPOVEDI
+    private fun showResult(id: Int){
         colorChosen(id)
-        // vzdy pujde na dalsi
-        if (hasNextQuestion()){
-            resultShowing.value = true
-        } else { finished.value = true }
+        if (hasNextQuestion()){ resultShowing.value = true }
+        else { finished.value = true }
         answerBtnEnabled.value = false
     }
 
     private fun colorChosen(id: Int){
-        // nastavit barvu cislo id (pres when)
-    }
-    private fun revertColor(){
-
+       val buttons = listOf(btn1Color, btn2Color, btn3Color, btn4Color)
+        buttons[correctButtonId].value = Color.Green
+        if (id != correctButtonId){ buttons[id].value = Color.Red }
     }
 }
 
