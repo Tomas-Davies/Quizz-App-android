@@ -8,5 +8,6 @@ data class Quizz (
     @PrimaryKey(autoGenerate = false)
     val quizzName: String,
     var isFavourited: Boolean = false,
-    var image: Int = 0
+    var image: Int = 0,
+    var category: Int = -1
     )

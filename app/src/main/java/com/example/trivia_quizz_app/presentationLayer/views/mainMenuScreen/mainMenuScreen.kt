@@ -152,7 +152,7 @@ private fun QuizzCard(quizz: Quizz, viewModel: MainMenuViewModel){
                 }
                 .fillMaxWidth()
                 .aspectRatio(1f),
-            onClick = { openQuizzActivity(ctx, quizz.quizzName) },
+            onClick = { openQuizzActivity(ctx, quizz.quizzName, isUserCreated, quizz.category) },
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 8.dp
             )
@@ -230,8 +230,10 @@ fun openCreateQuizzActivity(ctx: Context){
     activity.startActivityForResult(intent, 1)
 }
 
-fun openQuizzActivity(ctx: Context, quizName: String){
+fun openQuizzActivity(ctx: Context, quizName: String, isUserCreated: Boolean = false, quizCat: Int){
     val intent = Intent(ctx, QuizzScreen::class.java)
     intent.putExtra("quizzName", quizName)
+    intent.putExtra("isUserCreated", isUserCreated)
+    intent.putExtra("quizzCategory", quizCat)
     ctx.startActivity(intent)
 }

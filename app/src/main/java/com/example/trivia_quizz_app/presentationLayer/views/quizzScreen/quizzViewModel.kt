@@ -1,85 +1,185 @@
 package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
+data class QuizzData(
+    val question: String,
+    val correctAnswer: String,
+    val incorrectAnswers: List<String>
+)
+
+sealed class QuizzState {
+    data object Loading : QuizzState()
+    data class Question(
+        val questionText: String,
+        val answers: List<String>,
+        val correctAnswerIndex: Int
+    ) : QuizzState()
+    data class Error(val message: String) : QuizzState()
+    data object Finished : QuizzState()
+}
 
 class QuizzViewModel(
-    repository: QuizzRepository,
-    val quizzName: String
-): ViewModel() {
-
-    private val quizzWithQuestions = repository.getQuizzByName(quizzName)
-    var quizzQuestions = quizzWithQuestions.questions
-    private set
+    private val localRepository: QuizzRepository,
+    private val apiRepository: ApiQuizzRepository,
+    val quizzName: String,
+    private val isUserCreated: Boolean,
+    val category: Int
+) : ViewModel() {
+    private val _quizzState = MutableStateFlow<QuizzState>(QuizzState.Loading)
+    val quizzState: StateFlow<QuizzState> = _quizzState.asStateFlow()
 
     private var currentRound = 0
-    var currentQuestion = MutableLiveData(quizzQuestions[0].question)
-    var currentCorrectAnswer = MutableLiveData(quizzQuestions[0].correctAnswer)
-    var currentWrongAnswer1 = MutableLiveData(quizzQuestions[0].wrongAnswer1)
-    var currentWrongAnswer2 = MutableLiveData(quizzQuestions[0].wrongAnswer2)
-    var currentWrongAnswer3 = MutableLiveData(quizzQuestions[0].wrongAnswer3)
+    lateinit var quizzData: List<QuizzData>
+        private set
 
-    var resultShowing = MutableLiveData(false)
-    var streak = MutableLiveData(0)
-    var answerBtnEnabled = MutableLiveData(true)
-    var finished = MutableLiveData(false)
-    var correctButtonId = -1
+    private val _showNextButton = MutableStateFlow(false)
+    val showNextButton: StateFlow<Boolean> = _showNextButton.asStateFlow()
 
-    var btn1Color = MutableLiveData<Color>()
-    var btn2Color = MutableLiveData<Color>()
-    var btn3Color = MutableLiveData<Color>()
-    var btn4Color = MutableLiveData<Color>()
+    private val _showFinishButton = MutableStateFlow(false)
+    val showFinishButton: StateFlow<Boolean> = _showFinishButton.asStateFlow()
 
-    private fun hasNextQuestion(): Boolean {
-        return (currentRound) < quizzQuestions.size - 1
+    private val _inputEnabled = MutableStateFlow(true)
+    val inputEnabled: StateFlow<Boolean> = _inputEnabled.asStateFlow()
+
+    private val _streak = MutableStateFlow(0)
+    val streak: StateFlow<Int> = _streak.asStateFlow()
+
+    val btnColors: List<MutableStateFlow<Color>> = listOf(
+        MutableStateFlow(Color.Unspecified),MutableStateFlow(Color.Unspecified),
+        MutableStateFlow(Color.Unspecified),MutableStateFlow(Color.Unspecified)
+    )
+
+    init {
+        fetchData()
     }
 
-    //TODO pokud bude posledni otazka tak zmeni tlacitko na FINISH a prejde na zobrazeni statistik
-    fun nextRound(){
-        if (hasNextQuestion()){
-            currentRound++
-            resultShowing.value = false
-            answerBtnEnabled.value = true
-            updateData()
+    private fun fetchData() {
+        viewModelScope.launch {
+            try {
+                val data = if (isUserCreated) fetchLocalData() else fetchApiData()
+                quizzData = data
+                startQuizz()
+            } catch (e: Exception) {
+                _quizzState.value = QuizzState.Error("Error loading quiz data: ${e.message}")
+            }
         }
     }
 
-    private fun updateData(){
-        currentQuestion.value = quizzQuestions[currentRound].question
-        currentCorrectAnswer.value = quizzQuestions[currentRound].correctAnswer
-        currentWrongAnswer1.value = quizzQuestions[currentRound].wrongAnswer1
-        currentWrongAnswer2.value = quizzQuestions[currentRound].wrongAnswer2
-        currentWrongAnswer3.value = quizzQuestions[currentRound].wrongAnswer3
+    private suspend fun fetchLocalData(): List<QuizzData> {
+        val quizzWithQuestions = localRepository.getQuizzByName(quizzName)
+        return quizzWithQuestions.questions.map { questionAndAnswers ->
+            QuizzData(
+                question = questionAndAnswers.question,
+                correctAnswer = questionAndAnswers.correctAnswer,
+                incorrectAnswers = listOf(questionAndAnswers.wrongAnswer1, questionAndAnswers.wrongAnswer2, questionAndAnswers.wrongAnswer3)
+            )
+        }
     }
 
-    fun onAnswerClicked(id: Int) {
-        showResult(id)
+    private suspend fun fetchApiData(): List<QuizzData> {
+        val apiQuizz = apiRepository.getQuizz(category)
+        return apiQuizz.apiQuestionAndAnswers.map { question ->
+            QuizzData(
+                question = question.question,
+                correctAnswer = question.correct_answer,
+                incorrectAnswers = question.incorrect_answers
+            )
+        }
     }
 
-    private fun showResult(id: Int){
-        colorChosen(id)
-        if (hasNextQuestion()){ resultShowing.value = true }
-        else { finished.value = true }
-        answerBtnEnabled.value = false
+
+    fun startQuizz() {
+        if (quizzData.isNotEmpty()) {
+            val question = quizzData[currentRound]
+            val answers = (question.incorrectAnswers + question.correctAnswer).shuffled()
+            val correctIndex = answers.indexOf(question.correctAnswer)
+
+            _quizzState.value = QuizzState.Question(
+                questionText = question.question,
+                answers = answers,
+                correctAnswerIndex = correctIndex
+            )
+        } else {
+            _quizzState.value = QuizzState.Finished
+        }
     }
 
-    private fun colorChosen(id: Int){
-       val buttons = listOf(btn1Color, btn2Color, btn3Color, btn4Color)
-        buttons[correctButtonId].value = Color.Green
-        if (id != correctButtonId){ buttons[id].value = Color.Red }
+    fun onAnswerSelected(index: Int) {
+        val currentState = _quizzState.value
+        if (currentState is QuizzState.Question) {
+            _inputEnabled.value = false
+            val correctAnswerIndex = currentState.correctAnswerIndex
+            btnColors[index].value = Color.Red
+            btnColors[correctAnswerIndex].value = Color.Green
+            if (index == correctAnswerIndex) {
+                // zmena statistik
+            } else {
+                // zmena statistik
+            }
+            nextRound()
+        }
+    }
+
+    private fun nextRound(){
+        val currentState = _quizzState.value
+        if (currentState is QuizzState.Question) {
+            currentRound++
+            if (currentRound < quizzData.size) {
+                _showNextButton.value = true
+            } else {
+                _showFinishButton.value = true
+            }
+        }
+    }
+
+    fun onNextClicked(){
+        val currentState = _quizzState.value
+        if (currentState is QuizzState.Question) {
+            _inputEnabled.value = true
+            startQuizz()
+            _showNextButton.value = false
+        }
+    }
+
+    fun onFinishClicked(){
+        val currentState = _quizzState.value
+        if (currentState is QuizzState.Question) {
+            // TODO SHOW STATISTICS
+        }
+    }
+
+    fun setDefaultColors(defaultBtnColor: Color){
+        btnColors[0].value = defaultBtnColor
+        btnColors[1].value = defaultBtnColor
+        btnColors[2].value = defaultBtnColor
+        btnColors[3].value = defaultBtnColor
     }
 }
 
-class QuizzModelFactory(private val repository: QuizzRepository, private val quizzName: String): ViewModelProvider.Factory {
+
+
+
+class QuizzModelFactory(
+    private val repository: QuizzRepository,
+    private val apiRepository: ApiQuizzRepository,
+    private val quizzName: String,
+    private val isUserCreated: Boolean,
+    private val category: Int = -1)
+    : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(QuizzViewModel::class.java)){
             @Suppress("UNCHECKED_CAST")
-            return QuizzViewModel(repository, quizzName) as T
+            return QuizzViewModel(repository, apiRepository, quizzName, isUserCreated, category) as T
         }
         throw IllegalArgumentException("Unknown VieModel class")
     }

@@ -2,7 +2,6 @@ package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -27,55 +26,62 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
+import com.example.trivia_quizz_app.RetrofitInstance
+import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.ui.theme.AppTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 
 
-class QuizzScreen: AppCompatActivity() {
-    private lateinit var viewModel: QuizzViewModel
-
+class QuizzScreen : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val quizzName = intent.getStringExtra("quizzName") ?: ""
 
-        viewModel = viewModels<QuizzViewModel> {
-            QuizzModelFactory((application as QuizzApp).quizzRepo, quizzName)
-        }.value
+        val quizzName = intent.getStringExtra("quizzName") ?: ""
+        val isUserCreated = intent.getBooleanExtra("isUserCreated", false)
+        val quizCategory = intent.getIntExtra("quizzCategory", -1)
+
+        val viewModel: QuizzViewModel by viewModels {
+            QuizzModelFactory(
+                (application as QuizzApp).quizzRepo,
+                ApiQuizzRepository(RetrofitInstance.api),
+                quizzName,
+                isUserCreated,
+                quizCategory
+            )
+        }
 
         setContent {
             AppTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MainView(viewModel)
-                }
+                QuizScreenContent(viewModel)
             }
         }
     }
@@ -83,83 +89,90 @@ class QuizzScreen: AppCompatActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainView(viewModel: QuizzViewModel){
+fun QuizScreenContent(viewModel: QuizzViewModel) {
+    val quizState by viewModel.quizzState.collectAsState()
     val ctx = LocalContext.current
-    val activity = ctx as Activity
-    val correctAnswer = viewModel.currentCorrectAnswer.observeAsState()
-    val currentWrongAnswer1 = viewModel.currentWrongAnswer1.observeAsState()
-    val currentWrongAnswer2 = viewModel.currentWrongAnswer2.observeAsState()
-    val currentWrongAnswer3 = viewModel.currentWrongAnswer3.observeAsState()
-    val shuffledAnswers = listOf(correctAnswer, currentWrongAnswer1, currentWrongAnswer2, currentWrongAnswer3).shuffled()
-    viewModel.correctButtonId = shuffledAnswers.indexOf(correctAnswer)
-    val btn1Color = viewModel.btn1Color.observeAsState()
-    val btn2Color = viewModel.btn2Color.observeAsState()
-    val btn3Color = viewModel.btn3Color.observeAsState()
-    val btn4Color = viewModel.btn4Color.observeAsState()
+    val buttonColors = viewModel.btnColors.map { color -> color.collectAsState() }
     val defaultBtnColor = MaterialTheme.colorScheme.primary
-    setDefaultColors(viewModel, defaultBtnColor)
-
+    viewModel.setDefaultColors(defaultBtnColor)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = viewModel.quizzName.uppercase()) },
+                title = { Text(viewModel.quizzName.uppercase()) },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        activity.finish()
-                    }) {
+                    IconButton(onClick = { (ctx as Activity).finish() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
-                },
-                actions = {}
+                }
             )
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = Modifier.padding(22.dp),
         ) {
-            QuizzScreenView(
-                viewModel,
-                shuffledAnswers,
-                btn1Color,
-                btn2Color,
-                btn3Color,
-                btn4Color
-            )
+            Box(modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()) {
+                when (quizState) {
+                    is QuizzState.Loading -> {
+                        LoadingView()
+                    }
+                    is QuizzState.Question -> {
+                        val currentState = quizState as QuizzState.Question
+                        QuizzQuestionView(
+                            questionText = currentState.questionText,
+                            answers = currentState.answers,
+                            viewModel = viewModel,
+                            buttonColors = buttonColors,
+                            defaultBtnColor = defaultBtnColor,
+                            onAnswerSelected = { viewModel.onAnswerSelected(it) }
+                        )
+                    }
+                    is QuizzState.Finished -> {
+                        QuizzFinishedView { /* SHOW STATISTICS */ }
+                    }
+                    is QuizzState.Error -> {
+                        ErrorView((quizState as QuizzState.Error).message)
+                    }
+                }
+            }
         }
+
     }
 }
 
 @Composable
-private fun QuizzScreenView(
-    viewModel: QuizzViewModel,
-    shuffledAnswers: List<State<String?>>,
-    btn1Color: State<Color?>,
-    btn2Color: State<Color?>,
-    btn3Color: State<Color?>,
-    btn4Color: State<Color?>
-    ){
-    val ctx = LocalContext.current
-    val question = viewModel.currentQuestion.observeAsState()
-    val resultShowing = viewModel.resultShowing.observeAsState()
-    val finished = viewModel.finished.observeAsState()
-    val answerBtnEnabled = viewModel.answerBtnEnabled.observeAsState()
-    val defaultBtnColor = MaterialTheme.colorScheme.primary
+fun LoadingView() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
 
+@Composable
+fun QuizzQuestionView(
+    questionText: String,
+    answers: List<String>,
+    viewModel: QuizzViewModel,
+    buttonColors: List<State<Color>>,
+    defaultBtnColor: Color,
+    onAnswerSelected: (Int) -> Unit
+) {
+    val showFinishedButton = viewModel.showFinishButton.collectAsState()
+    val inputEnabled = viewModel.inputEnabled.collectAsState()
+    val showNextButton = viewModel.showNextButton.collectAsState()
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(22.dp),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-
     ) {
-        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
         ElevatedCard(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -168,92 +181,49 @@ private fun QuizzScreenView(
                     .fillMaxWidth()
                     .height(screenHeight / 4),
                 contentAlignment = Alignment.Center
-            ){
-                question.value?.let {
-                    Text(
-                        text = it,
-                        fontSize = 22.sp)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-        val answr1 = shuffledAnswers[0]
-        answr1.value.let {answer ->
-            answerBtnEnabled.value?.let {
-                if (answer != null) {
-                    btn1Color.value?.let { bgColor ->
-                        AnswerButton(
-                            text = answer,
-                            onClick = { viewModel.onAnswerClicked(0) },
-                            enabledState = it,
-                            bgColor = bgColor
-                        )
-                    }
-                }
-            }
-        }
-        val answr2 = shuffledAnswers[1]
-        answr2.value.let {answer ->
-            answerBtnEnabled.value?.let {
-                if (answer != null) {
-                    btn2Color.value?.let { bgColor ->
-                        AnswerButton(
-                            text = answer,
-                            onClick = { viewModel.onAnswerClicked(1) },
-                            enabledState = it,
-                            bgColor = bgColor
-                        )
-                    }
-                }
-            }
-        }
-        val answr3 = shuffledAnswers[2]
-        answr3.value.let {answer ->
-            answerBtnEnabled.value?.let {
-                if (answer != null) {
-                    btn3Color.value?.let { bgColor ->
-                        AnswerButton(
-                            text = answer,
-                            onClick = { viewModel.onAnswerClicked(2) },
-                            enabledState = it,
-                            bgColor = bgColor
-                        )
-                    }
-                }
-            }
-        }
-        val answr4 = shuffledAnswers[3]
-        answr4.value.let {answer ->
-            answerBtnEnabled.value?.let {
-                if (answer != null) {
-                    btn4Color.value?.let { bgColor ->
-                        AnswerButton(
-                            text = answer,
-                            onClick = { viewModel.onAnswerClicked(3) },
-                            enabledState = it,
-                            bgColor = bgColor
-                        )
-                    }
-                }
+            ) {
+                Text(
+                    text = questionText,
+                    fontSize = 22.sp
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        //ProgressIndicator(viewModel)
-        //StreakIndicator(viewModel)
-        if (resultShowing.value == true){
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ){
+            answers.forEachIndexed { index, answer ->
+                AnswerButton(
+                    text = answer,
+                    onClick = { onAnswerSelected(index) },
+                    enabledState = inputEnabled.value,
+                    bgColor = buttonColors[index].value
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+        StreakIndicator(viewModel = viewModel)
+        Spacer(modifier = Modifier.height(18.dp))
+
+        if (showNextButton.value){
             Button(onClick = {
-                viewModel.nextRound()
-                setDefaultColors(viewModel, defaultBtnColor)
+                viewModel.onNextClicked()
+                viewModel.setDefaultColors(defaultBtnColor)
             }) {
                 Text(text = stringResource(id = R.string.quiz_next))
             }
         }
 
-        if (finished.value == true){
-            Button(onClick = { (ctx as Activity).finish() /* TODO prechod na shrnuti kvizu */}) {
+        if (showFinishedButton.value) {
+            val ctx = LocalContext.current
+            Button(onClick = {
+                viewModel.onFinishClicked()
+                (ctx as Activity).finish()
+            /* TODO prechod na shrnuti kvizu */
+            }) {
                 Text(text = stringResource(id = R.string.quiz_finish))
             }
         }
@@ -281,21 +251,48 @@ fun AnswerButton(
             contentColor = textColor,
             disabledContainerColor = bgColor,
             disabledContentColor = textColor
-            ),
+        ),
         contentPadding = PaddingValues(16.dp),
         shape = RoundedCornerShape(25),
         border = BorderStroke(3.dp, MaterialTheme.colorScheme.tertiary)
-        ) {
+    ) {
         Text(
             text = text,
             fontSize = 20.sp)
     }
 }
 
+@Composable
+fun QuizzFinishedView(onFinish: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Quiz Finished!")
+
+        Button(onClick = onFinish) {
+            Text("Finish Quiz")
+        }
+    }
+}
+
+@Composable
+fun ErrorView(errorMessage: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Error: $errorMessage",
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
 
 @Composable
 private fun ProgressIndicator(viewModel: QuizzViewModel){
-    val questions = viewModel.quizzQuestions
+    val questions = viewModel.quizzData
     LazyHorizontalGrid(
         rows = GridCells.Fixed(questions.size),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -314,7 +311,7 @@ private fun ProgressIndicatorItem(viewModel: QuizzViewModel, id: Int){
 
 @Composable
 private fun StreakIndicator(viewModel: QuizzViewModel){
-    val streak = viewModel.streak.observeAsState()
+    val streak = viewModel.streak.collectAsState()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -327,13 +324,6 @@ private fun StreakIndicator(viewModel: QuizzViewModel){
         Image(
             painter = painterResource(id = flameDrawableId),
             contentDescription = "Streak",
-            modifier = Modifier.size(40.dp))
+            modifier = Modifier.size(20.dp))
     }
-}
-
-private fun setDefaultColors(viewModel: QuizzViewModel, defaultBtnColor: Color){
-    viewModel.btn1Color.value = defaultBtnColor
-    viewModel.btn2Color.value = defaultBtnColor
-    viewModel.btn3Color.value = defaultBtnColor
-    viewModel.btn4Color.value = defaultBtnColor
 }
