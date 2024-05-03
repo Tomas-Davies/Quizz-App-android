@@ -14,15 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun ErrorMessage(
     modifier: Modifier = Modifier,
     message: String,
-    size: TextUnit = TextUnit.Unspecified
+    size: TextUnit = 12.sp
 ){
     Row(
-        modifier = modifier.padding(8.dp),
+        modifier = modifier.padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(modifier = Modifier.size(18.dp),

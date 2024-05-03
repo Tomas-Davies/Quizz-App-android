@@ -41,7 +41,7 @@ interface QuizzDao {
     fun getQuizzes(): List<UserQuizzWithQuestions>
 
     @Query("SELECT * FROM Quizzes WHERE quizzName LIKE :quizzName")
-    suspend fun findQuizzByName(quizzName: String): UserQuizzWithQuestions
+    fun findQuizzByName(quizzName: String): UserQuizzWithQuestions?
 
     @Query("SELECT * FROM QuestionsAndAnswers WHERE quizzName LIKE :quizzName")
     fun findQuestionsByQuizz(quizzName: String): List<QuestionAAnswers>

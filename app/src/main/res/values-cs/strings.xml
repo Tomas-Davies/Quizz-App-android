@@ -7,6 +7,7 @@
     <string name="create_quizz_count">Počet</string>
     <string name="create_quizz_add_question">Přidat otázku</string>
     <string name="create_quizz_question">Otázka</string>
+    <string name="create_quizz_question_added">Otázka přidána</string>
     <string name="create_quizz_correct_answer">Správná odpověď</string>
     <string name="create_quizz_wrong_answer">Špatná odpověď</string>
     <string name="create_quizz_name">Název</string>
@@ -14,4 +15,10 @@
     <string name="create_quizz_question_error">Kvíz musí obsahovat alespoň 1 otázku.</string>
     <string name="quiz_next">Další</string>
     <string name="quiz_finish">Konec</string>
+    <string name="quiz_api_error">Chyba načítání dat</string>
+    <string name="create_quizz_name_taken_error">Jméno kvízu je obsazené.</string>
+    <string name="quiz_result">Zobrazit výsledek</string>
+    <string name="quiz_result_correct">"Správné odpovědi: "</string>
+    <string name="quiz_result_wrong">"Špatné odpovědi: "</string>
+    <string name="quiz_result_score">Skóre</string>
 </resources>

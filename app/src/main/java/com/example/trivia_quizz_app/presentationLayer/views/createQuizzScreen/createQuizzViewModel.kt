@@ -1,6 +1,5 @@
 package com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen
 
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.trivia_quizz_app.dataLayer.MyConstants
@@ -23,17 +22,20 @@ class CreateQuizzViewModel(private val repository: QuizzRepository): ViewModel()
         repository.insertQuizz(quizz, questions)
     }
 
-    fun checkQuestionsInput(input: List<String>): Boolean
-    {
+    fun nameIsAvailable(name: String): Boolean {
+        val nameAvailable = (repository.getQuizzByName(name) == null)
+        return nameAvailable
+    }
+
+    fun checkQuestionsInput(input: List<String>): Boolean {
         for (w in input){
             if (w.isEmpty()) return false
         }
         return true
     }
 
-    fun checkIfHasQuestions(): Int{
-        if (questions.size < MyConstants.QUIZZ_QUESTION_COUNT) {return 0}
-        return 1
+    fun checkIfHasQuestions(): Int {
+        return if (questions.size < MyConstants.QUIZZ_QUESTION_COUNT) 0 else 1
     }
 }
 

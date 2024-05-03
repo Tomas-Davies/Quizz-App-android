@@ -2,6 +2,7 @@ package com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen
 
 import android.app.Activity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -76,7 +77,8 @@ private fun MainView(viewModel: CreateQuizzViewModel){
     val ctx = LocalContext.current
     val activity = ctx as Activity
     var quizzName by remember { mutableStateOf("") }
-    var isValid by remember { mutableStateOf(true) }
+    var nameAvailable by remember { mutableStateOf(true) }
+    var nameFilled by remember { mutableStateOf(true) }
     var hasQuestions by remember { mutableIntStateOf(-1) }
     val localFocusManager = LocalFocusManager.current
 
@@ -95,14 +97,15 @@ private fun MainView(viewModel: CreateQuizzViewModel){
                     }
                 },
                 actions = {
-                    // jeste idk co tu bude
+
                 })
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                isValid = viewModel.checkQuestionsInput(listOf(quizzName))
+                nameAvailable = viewModel.nameIsAvailable(quizzName)
+                nameFilled = quizzName.isNotEmpty()
                 hasQuestions = viewModel.checkIfHasQuestions()
-                if (isValid && hasQuestions == 1){
+                if (nameAvailable && hasQuestions == 1){
                     viewModel.quizzName = quizzName
                     viewModel.addQuizzToRepository()
                     activity.setResult(Activity.RESULT_OK)
@@ -114,8 +117,8 @@ private fun MainView(viewModel: CreateQuizzViewModel){
         }
     ) {innerPadding ->
         Column(
-            modifier = Modifier.
-                padding(0.dp, innerPadding.calculateTopPadding(), 0.dp, 0.dp)
+            modifier = Modifier
+                .padding(0.dp, innerPadding.calculateTopPadding(), 0.dp, 0.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
                         localFocusManager.clearFocus()
@@ -123,17 +126,19 @@ private fun MainView(viewModel: CreateQuizzViewModel){
                 },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isValid || hasQuestions != 0){
-                Spacer(modifier = Modifier.size(32.dp))
+            if (nameAvailable || hasQuestions != 0){
+                Spacer(modifier = Modifier.size(24.dp))
             }
-
-            if (!isValid){
+            if (!nameFilled){
                 val message = R.string.create_quizz_input_error
                 ErrorMessage(message = stringResource(id = message))
             }
-
             if (hasQuestions == 0){
                 val message = R.string.create_quizz_question_error
+                ErrorMessage(message = stringResource(id = message))
+            }
+            if (!nameAvailable){
+                val message = R.string.create_quizz_name_taken_error
                 ErrorMessage(message = stringResource(id = message))
             }
 
@@ -161,6 +166,7 @@ private fun Questions(quizName: String, viewModel: CreateQuizzViewModel){
     var count by remember { mutableIntStateOf(viewModel.questions.size) }
     var isValid by remember { mutableStateOf(true) }
     val wrongAnswerColor = MaterialTheme.colorScheme.errorContainer
+    val ctx = LocalContext.current
 
     Row (
         modifier = Modifier
@@ -244,19 +250,21 @@ private fun Questions(quizName: String, viewModel: CreateQuizzViewModel){
         val newQuestion = QuestionAAnswers(
             quizzName = quizName, question = question, correctAnswer = correctAnswer,
             wrongAnswer1 = wrongAnswer1, wrongAnswer2 = wrongAnswer2, wrongAnswer3 = wrongAnswer3)
-
-        ElevatedButton(onClick = {
-            val input = listOf(question, correctAnswer, wrongAnswer1, wrongAnswer2, wrongAnswer3)
-            isValid = viewModel.checkQuestionsInput(input)
-            if (isValid){
-                count++
-                viewModel.addQuestion(newQuestion)
-                question = ""
-                correctAnswer = ""
-                wrongAnswer1 = ""
-                wrongAnswer2 = ""
-                wrongAnswer3 = ""
-            }
+        val toastMessage = stringResource(id = R.string.create_quizz_question_added)
+        ElevatedButton(
+            onClick = {
+                val input = listOf(question, correctAnswer, wrongAnswer1, wrongAnswer2, wrongAnswer3)
+                isValid = viewModel.checkQuestionsInput(input)
+                if (isValid){
+                    count++
+                    viewModel.addQuestion(newQuestion)
+                    Toast.makeText(ctx, toastMessage, Toast.LENGTH_SHORT).show()
+                    question = ""
+                    correctAnswer = ""
+                    wrongAnswer1 = ""
+                    wrongAnswer2 = ""
+                    wrongAnswer3 = ""
+                }
         }) {
             Text(text = stringResource(id = R.string.create_quizz_add_question))
         }

@@ -1,6 +1,6 @@
 package com.example.trivia_quizz_app
 
-import com.example.trivia_quizz_app.dataLayer.Api
+import com.example.trivia_quizz_app.dataLayer.TriviaApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -17,10 +17,10 @@ object RetrofitInstance {
         .addInterceptor(interceptor)
         .build()
 
-    val api: Api = Retrofit.Builder()
+    val triviaApi: TriviaApi = Retrofit.Builder()
         .addConverterFactory(GsonConverterFactory.create())
-        .baseUrl(Api.BASE_URL)
+        .baseUrl(TriviaApi.TRIVIA_BASE_URL)
         .client(client)
         .build()
-        .create(Api::class.java)
+        .create(TriviaApi::class.java)
 }

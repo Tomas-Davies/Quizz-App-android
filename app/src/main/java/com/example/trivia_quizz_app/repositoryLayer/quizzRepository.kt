@@ -13,7 +13,7 @@ class QuizzRepository(private val quizzDao: QuizzDao) {
         return quizzDao.getQuizzes()
     }
 
-    suspend fun getQuizzByName(name: String): UserQuizzWithQuestions{
+    fun getQuizzByName(name: String): UserQuizzWithQuestions? {
         return quizzDao.findQuizzByName(name)
     }
 

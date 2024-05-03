@@ -1,10 +1,14 @@
 package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -18,8 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,23 +34,35 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
+import androidx.lifecycle.LifecycleOwner
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.RetrofitInstance
@@ -66,7 +81,7 @@ class QuizzScreen : AppCompatActivity() {
         val viewModel: QuizzViewModel by viewModels {
             QuizzModelFactory(
                 (application as QuizzApp).quizzRepo,
-                ApiQuizzRepository(RetrofitInstance.api),
+                ApiQuizzRepository(RetrofitInstance.triviaApi),
                 quizzName,
                 isUserCreated,
                 quizCategory
@@ -106,7 +121,7 @@ fun QuizScreenContent(viewModel: QuizzViewModel) {
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier.padding(22.dp),
+            modifier = Modifier.padding(22.dp, 0.dp),
         ) {
             Box(modifier = Modifier
                 .padding(innerPadding)
@@ -127,10 +142,10 @@ fun QuizScreenContent(viewModel: QuizzViewModel) {
                         )
                     }
                     is QuizzState.Finished -> {
-                        QuizzFinishedView { /* SHOW STATISTICS */ }
+                        FinishedView(viewModel)
                     }
                     is QuizzState.Error -> {
-                        ErrorView((quizState as QuizzState.Error).message)
+                        ErrorView(stringResource((quizState as QuizzState.Error).messageId))
                     }
                 }
             }
@@ -161,24 +176,29 @@ fun QuizzQuestionView(
     val showFinishedButton = viewModel.showFinishButton.collectAsState()
     val inputEnabled = viewModel.inputEnabled.collectAsState()
     val showNextButton = viewModel.showNextButton.collectAsState()
+    val streak = viewModel.streak.collectAsState()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
 
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                    .fillMaxWidth()
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(screenHeight / 4),
+                    .height(screenHeight / 4)
+                    .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = questionText,
-                    fontSize = 22.sp
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -199,7 +219,7 @@ fun QuizzQuestionView(
         }
 
         Spacer(modifier = Modifier.height(18.dp))
-        StreakIndicator(viewModel = viewModel)
+        StreakIndicator(count = streak.value)
         Spacer(modifier = Modifier.height(18.dp))
 
         if (showNextButton.value){
@@ -212,13 +232,11 @@ fun QuizzQuestionView(
         }
 
         if (showFinishedButton.value) {
-            val ctx = LocalContext.current
             Button(onClick = {
                 viewModel.onFinishClicked()
-                (ctx as Activity).finish()
             /* TODO prechod na shrnuti kvizu */
             }) {
-                Text(text = stringResource(id = R.string.quiz_finish))
+                Text(text = stringResource(id = R.string.quiz_result))
             }
         }
     }
@@ -252,22 +270,115 @@ fun AnswerButton(
     ) {
         Text(
             text = text,
-            fontSize = 20.sp)
+            fontSize = 16.sp)
     }
 }
 
 @Composable
-fun QuizzFinishedView(onFinish: () -> Unit) {
+fun FinishedView(viewModel: QuizzViewModel) {
+    val ctx = LocalContext.current
+    val medalLimit = viewModel.medalLimit.collectAsState().value
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.SpaceAround
     ) {
-        Text("Quiz Finished!")
-
-        Button(onClick = onFinish) {
-            Text("Finish Quiz")
+        val medalDrawable = when {
+            medalLimit < 33 -> R.drawable.bronze_medal
+            medalLimit < 66 -> R.drawable.silver_medal
+            else -> R.drawable.gold_medal
         }
+
+        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+        val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+
+        Image(
+            painter = painterResource(id = medalDrawable),
+            contentDescription = "medal",
+            modifier = Modifier.size(screenHeight / 3)
+        )
+
+        val actualScore = viewModel.getScore()
+        val width = 3 * (screenWidth / 4)
+
+        ResultProgressBar(
+            viewModel,
+            indicatorProgress = actualScore.toFloat(),
+            modifier = Modifier.width(width)
+        )
+
+        Column(
+            modifier = Modifier.width(width),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            val label1 = stringResource(id = R.string.quiz_result_correct)
+            ResultRow(name = label1, data = viewModel.correctCount.toString())
+            val label2 = stringResource(id = R.string.quiz_result_wrong)
+            ResultRow(name = label2, data = viewModel.wrongCount.toString())
+            val label3 = stringResource(id = R.string.quiz_result_max_streak)
+            ResultRow(name = label3, data = viewModel.maxStreak.toString())
+        }
+
+        Button(onClick = { (ctx as Activity).finish() }) {
+            Text(stringResource(id = R.string.quiz_finish))
+        }
+    }
+}
+
+
+@SuppressLint("StateFlowValueCalledInComposition")
+@Composable
+fun ResultProgressBar(
+    viewModel: QuizzViewModel,
+    indicatorProgress: Float,
+    modifier: Modifier = Modifier,
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
+){
+    var progress by remember { mutableFloatStateOf(0F) }
+    val animDuration = 1700
+    val progressAnimation by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = animDuration, easing = FastOutSlowInEasing),
+        label = ""
+    )
+
+    val label = stringResource(id = R.string.quiz_result_score)
+    Text(
+        text = "$label: ${(progressAnimation * 100).toInt()}",
+        fontSize = 40.sp
+    )
+    LinearProgressIndicator(
+        progress = { progressAnimation },
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .height(18.dp)
+    )
+    LaunchedEffect(lifecycleOwner) {
+        progress = indicatorProgress / 100
+    }
+
+    when  {
+        progressAnimation > 0.66F -> viewModel.medalLimit.value = 66
+        progressAnimation > 0.33F -> viewModel.medalLimit.value = 33
+        else -> viewModel.medalLimit.value = 0
+    }
+}
+
+@Composable
+fun ResultRow(name: String, data: String){
+    Row (
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ){
+        Text(
+            text = name,
+            fontSize = 24.sp
+        )
+        Text(
+            text = data,
+            fontSize = 24.sp
+        )
     }
 }
 
@@ -284,40 +395,27 @@ fun ErrorView(errorMessage: String) {
     }
 }
 
-@Composable
-private fun ProgressIndicator(viewModel: QuizzViewModel){
-    val questions = viewModel.quizzData
-    LazyHorizontalGrid(
-        rows = GridCells.Fixed(questions.size),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        items(questions.size){idx ->
-            ProgressIndicatorItem(viewModel = viewModel, id = idx)
-        }
-    }
-}
 
 @Composable
-private fun ProgressIndicatorItem(viewModel: QuizzViewModel, id: Int){
-
-}
-
-@Composable
-private fun StreakIndicator(viewModel: QuizzViewModel){
-    val streak = viewModel.streak.collectAsState()
-
+private fun StreakIndicator(count: Int, textSize: TextUnit = TextUnit.Unspecified, imageSize: Dp = 20.dp){
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "Streak: ")
-        Text(text = streak.value.toString())
+        Text(
+            text = stringResource(id = R.string.quiz_result_streak) + ": ",
+            fontSize = textSize
+            )
+        Text(
+            text = count.toString(),
+            fontSize = textSize
+            )
         val flameDrawableId = R.drawable.flame_icon
+        Spacer(modifier = Modifier.width(4.dp))
         Image(
             painter = painterResource(id = flameDrawableId),
             contentDescription = "Streak",
-            modifier = Modifier.size(20.dp))
+            modifier = Modifier.size(imageSize))
     }
 }

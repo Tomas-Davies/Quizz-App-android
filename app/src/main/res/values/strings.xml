@@ -6,11 +6,20 @@
     <string name="create_quizz_count">Count</string>
     <string name="create_quizz_add_question">Add question</string>
     <string name="create_quizz_question">Question</string>
+    <string name="create_quizz_question_added">Question added</string>
     <string name="create_quizz_correct_answer">Correct answer</string>
     <string name="create_quizz_wrong_answer">Wrong answer</string>
     <string name="create_quizz_name">Name</string>
     <string name="create_quizz_input_error">All fields must be filled.</string>
     <string name="create_quizz_question_error">Quizz must have at least 1 question.</string>
+    <string name="create_quizz_name_taken_error">Quizz name is already taken.</string>
     <string name="quiz_next">Next</string>
+    <string name="quiz_result">Show results</string>
+    <string name="quiz_result_correct">Correct answers: </string>
+    <string name="quiz_result_wrong">Wrong answers: </string>
     <string name="quiz_finish">Finish</string>
+    <string name="quiz_api_error">Error loading data</string>
+    <string name="quiz_result_streak" translatable="false">Streak</string>
+    <string name="quiz_result_max_streak" translatable="false">Max Streak</string>
+    <string name="quiz_result_score">Score</string>
 </resources>

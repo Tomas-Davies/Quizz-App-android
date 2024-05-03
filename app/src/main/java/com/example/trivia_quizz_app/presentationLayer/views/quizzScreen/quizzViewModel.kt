@@ -1,9 +1,11 @@
 package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
+import android.text.Html
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,14 +20,14 @@ data class QuizzData(
 )
 
 sealed class QuizzState {
-    data object Loading : QuizzState()
+    data object Loading: QuizzState()
     data class Question(
         val questionText: String,
         val answers: List<String>,
         val correctAnswerIndex: Int
     ) : QuizzState()
-    data class Error(val message: String) : QuizzState()
-    data object Finished : QuizzState()
+    data class Error(val messageId: Int): QuizzState()
+    data object Finished: QuizzState()
 }
 
 class QuizzViewModel(
@@ -54,6 +56,12 @@ class QuizzViewModel(
     private val _streak = MutableStateFlow(0)
     val streak: StateFlow<Int> = _streak.asStateFlow()
 
+    val medalLimit = MutableStateFlow(0)
+
+    var correctCount = 0
+    var wrongCount = 0
+    var maxStreak = 0
+
     val btnColors: List<MutableStateFlow<Color>> = listOf(
         MutableStateFlow(Color.Unspecified),MutableStateFlow(Color.Unspecified),
         MutableStateFlow(Color.Unspecified),MutableStateFlow(Color.Unspecified)
@@ -70,35 +78,38 @@ class QuizzViewModel(
                 quizzData = data
                 startQuizz()
             } catch (e: Exception) {
-                _quizzState.value = QuizzState.Error("Error loading quiz data: ${e.message}")
+                _quizzState.value = QuizzState.Error(R.string.quiz_api_error)
             }
         }
     }
 
-    private suspend fun fetchLocalData(): List<QuizzData> {
+    private fun fetchLocalData(): List<QuizzData> {
         val quizzWithQuestions = localRepository.getQuizzByName(quizzName)
-        return quizzWithQuestions.questions.map { questionAndAnswers ->
+        return quizzWithQuestions?.questions?.map { questionAndAnswers ->
             QuizzData(
                 question = questionAndAnswers.question,
                 correctAnswer = questionAndAnswers.correctAnswer,
                 incorrectAnswers = listOf(questionAndAnswers.wrongAnswer1, questionAndAnswers.wrongAnswer2, questionAndAnswers.wrongAnswer3)
             )
-        }
+        } ?: emptyList()
     }
 
     private suspend fun fetchApiData(): List<QuizzData> {
         val apiQuizz = apiRepository.getQuizz(category)
-        return apiQuizz.apiQuestionAndAnswers.map { question ->
+        return apiQuizz.results.map { question ->
             QuizzData(
-                question = question.question,
-                correctAnswer = question.correct_answer,
-                incorrectAnswers = question.incorrect_answers
+                question = question.question.parseHtmlString(),
+                correctAnswer = question.correct_answer.parseHtmlString(),
+                incorrectAnswers = question.incorrect_answers.map { answer -> answer.parseHtmlString() }
             )
         }
     }
 
+    private fun String.parseHtmlString(): String{
+        return Html.fromHtml(this, Html.FROM_HTML_MODE_LEGACY).toString()
+    }
 
-    fun startQuizz() {
+    private fun startQuizz() {
         if (quizzData.isNotEmpty()) {
             val question = quizzData[currentRound]
             val answers = (question.incorrectAnswers + question.correctAnswer).shuffled()
@@ -110,7 +121,7 @@ class QuizzViewModel(
                 correctAnswerIndex = correctIndex
             )
         } else {
-            _quizzState.value = QuizzState.Finished
+            _quizzState.value = QuizzState.Error(R.string.quiz_api_error)
         }
     }
 
@@ -122,9 +133,14 @@ class QuizzViewModel(
             btnColors[index].value = Color.Red
             btnColors[correctAnswerIndex].value = Color.Green
             if (index == correctAnswerIndex) {
-                // zmena statistik
+                correctCount++
+                _streak.value++
+                if (_streak.value > maxStreak) {
+                    maxStreak = _streak.value
+                }
             } else {
-                // zmena statistik
+                wrongCount++
+                _streak.value = 0
             }
             nextRound()
         }
@@ -154,7 +170,7 @@ class QuizzViewModel(
     fun onFinishClicked(){
         val currentState = _quizzState.value
         if (currentState is QuizzState.Question) {
-            // TODO SHOW STATISTICS
+            _quizzState.value = QuizzState.Finished
         }
     }
 
@@ -164,8 +180,13 @@ class QuizzViewModel(
         btnColors[2].value = defaultBtnColor
         btnColors[3].value = defaultBtnColor
     }
-}
 
+    fun getScore(): Int {
+        val correctCount = correctCount
+        val questionCount = quizzData.size
+        return (correctCount * 100) / questionCount
+    }
+}
 
 
 
