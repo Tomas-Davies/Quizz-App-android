@@ -9,7 +9,7 @@ import com.example.trivia_quizz_app.dataLayer.entities.relations.UserQuizzWithQu
 
 
 class QuizzRepository(private val quizzDao: QuizzDao) {
-    fun getQuizzes(): List<UserQuizzWithQuestions>{
+    suspend fun getQuizzes(): List<UserQuizzWithQuestions>{
         return quizzDao.getQuizzes()
     }
 
@@ -17,11 +17,11 @@ class QuizzRepository(private val quizzDao: QuizzDao) {
         return quizzDao.findQuizzByName(name)
     }
 
-    fun update(quizz: Quizz): Int {
+    suspend fun update(quizz: Quizz): Int {
         return quizzDao.update(quizz)
     }
 
-    fun fillDefaultData() {
+    suspend fun fillDefaultData() {
         val defaultQuizzes = listOf(
             Quizz(quizzName = "sport", image = R.drawable.sport_icon, category = MyConstants.SPORTS),
             Quizz(quizzName = "animals", image = R.drawable.animals_icon, category = MyConstants.ANIMALS),
@@ -31,14 +31,14 @@ class QuizzRepository(private val quizzDao: QuizzDao) {
         quizzDao.insertQuizzes(defaultQuizzes)
     }
 
-    fun insertQuizz(quizz: Quizz, questions: List<QuestionAAnswers>){
+    suspend fun insertQuizz(quizz: Quizz, questions: List<QuestionAAnswers>){
         quizzDao.insertQuizz(quizz)
         for (question in questions){
             quizzDao.insertQuestionAndAnswers(question)
         }
     }
 
-    fun deleteQuizz(quizz: Quizz){
+    suspend fun deleteQuizz(quizz: Quizz){
         val questions = quizzDao.findQuestionsByQuizz(quizz.quizzName)
         quizzDao.deleteQuestionsAndAnswers(questions)
         quizzDao.deleteQuizz(quizz)

@@ -18,8 +18,8 @@
     <string name="quiz_result_correct">Correct answers: </string>
     <string name="quiz_result_wrong">Wrong answers: </string>
     <string name="quiz_finish">Finish</string>
-    <string name="quiz_api_error">Error loading data</string>
+    <string name="quiz_loading_error">Error loading data</string>
     <string name="quiz_result_streak" translatable="false">Streak</string>
-    <string name="quiz_result_max_streak" translatable="false">Max Streak</string>
+    <string name="quiz_result_max_streak" translatable="false">Max Streak: </string>
     <string name="quiz_result_score">Score</string>
 </resources>

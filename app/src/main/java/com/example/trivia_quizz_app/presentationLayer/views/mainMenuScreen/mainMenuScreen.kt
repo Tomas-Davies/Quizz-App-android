@@ -35,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +54,9 @@ import androidx.compose.ui.unit.sp
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
+import com.example.trivia_quizz_app.presentationLayer.components.ErrorView
+import com.example.trivia_quizz_app.presentationLayer.components.LoadingView
+import com.example.trivia_quizz_app.presentationLayer.states.MainMenuState
 import com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen.CreateQuizzScreen
 import com.example.trivia_quizz_app.presentationLayer.views.quizzScreen.QuizzScreen
 import com.example.trivia_quizz_app.ui.theme.AppTheme
@@ -72,7 +76,7 @@ class MainMenuScreen: AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainView(viewModel)
+                    MenuScreenContent(viewModel)
                 }
             }
         }
@@ -83,7 +87,7 @@ class MainMenuScreen: AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1){
             if (resultCode == Activity.RESULT_OK){
-                viewModel.loadQuizzes()
+                viewModel.fetchQuizzes()
             }
         }
     }
@@ -91,8 +95,9 @@ class MainMenuScreen: AppCompatActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainView(viewModel: MainMenuViewModel){
+private fun MenuScreenContent(viewModel: MainMenuViewModel){
     val ctx = LocalContext.current
+    val menuState by viewModel.menuState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -109,14 +114,24 @@ private fun MainView(viewModel: MainMenuViewModel){
             }
         },
     ) {innerPadding ->
-        MainMenu(viewModel = viewModel, padding = innerPadding)
+        when(menuState){
+            is MainMenuState.Loading -> {
+                LoadingView()
+            }
+            is MainMenuState.ShowingQuizzes -> {
+                MainMenu(viewModel = viewModel, padding = innerPadding)
+            }
+            is MainMenuState.Error -> {
+                ErrorView(errorMessage = stringResource((menuState as MainMenuState.Error).messageId))
+            }
+        }
     }
 }
 
 
 @Composable
 private fun MainMenu(viewModel: MainMenuViewModel, padding: PaddingValues){
-    val quizzesAndQuestions = viewModel.quizzes
+    val quizzesAndQuestions = viewModel.quizzes.collectAsState().value
 
     LazyVerticalGrid(
         modifier = Modifier.padding(18.dp, padding.calculateTopPadding(), 18.dp, 0.dp),
@@ -178,7 +193,7 @@ private fun QuizzCard(quizz: Quizz, viewModel: MainMenuViewModel){
                             .clickable {
                                 starActive = !starActive
                                 quizz.isFavourited = starActive
-                                viewModel.update(quizz)
+                                viewModel.updateQuizz(quizz)
                             }
                     )
                     if (isUserCreated){
@@ -190,8 +205,7 @@ private fun QuizzCard(quizz: Quizz, viewModel: MainMenuViewModel){
                                 .padding(8.dp)
                                 .size(cardWidth / 5)
                                 .clickable {
-                                    viewModel.deleteQuiz(quizz)
-                                    viewModel.loadQuizzes()
+                                    viewModel.deleteQuizz(quizz)
                                 }
                         )
                     }

@@ -14,35 +14,35 @@ import com.example.trivia_quizz_app.dataLayer.entities.relations.UserQuizzWithQu
 interface QuizzDao {
 
     @Insert
-    fun insertQuizz(quizz: Quizz)
+    suspend fun insertQuizz(quizz: Quizz)
 
     @Insert
-    fun insertQuestionAndAnswers(question: QuestionAAnswers)
+    suspend fun insertQuestionAndAnswers(question: QuestionAAnswers)
 
     @Insert
-    fun insertQuizzes(quizes: List<Quizz>)
+    suspend fun insertQuizzes(quizes: List<Quizz>)
 
     @Delete
-    fun deleteQuizz(quizz: Quizz)
+    suspend fun deleteQuizz(quizz: Quizz)
 
     @Delete
-    fun deleteQuestion(question: QuestionAAnswers)
+    suspend fun deleteQuestion(question: QuestionAAnswers)
 
     @Delete
-    fun deleteQuestionsAndAnswers(questions: List<QuestionAAnswers>)
+    suspend fun deleteQuestionsAndAnswers(questions: List<QuestionAAnswers>)
 
     @Delete
-    fun deleteQuizzes(quizes: List<Quizz>)
+    suspend fun deleteQuizzes(quizes: List<Quizz>)
 
     @Update
-    fun update(quizz: Quizz): Int
+    suspend fun update(quizz: Quizz): Int
 
     @Query("SELECT * FROM Quizzes")
-    fun getQuizzes(): List<UserQuizzWithQuestions>
+    suspend fun getQuizzes(): List<UserQuizzWithQuestions>
 
     @Query("SELECT * FROM Quizzes WHERE quizzName LIKE :quizzName")
     fun findQuizzByName(quizzName: String): UserQuizzWithQuestions?
 
     @Query("SELECT * FROM QuestionsAndAnswers WHERE quizzName LIKE :quizzName")
-    fun findQuestionsByQuizz(quizzName: String): List<QuestionAAnswers>
+    suspend fun findQuestionsByQuizz(quizzName: String): List<QuestionAAnswers>
 }

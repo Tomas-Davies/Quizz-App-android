@@ -9,8 +9,7 @@ interface TriviaApi {
     suspend fun getQuizz(
         @Query("category") category: Int,
         @Query("type") type: String = "multiple",
-        @Query("amount") amount: Int = 10,
-        @Query("difficulty") difficulty: String = "easy"
+        @Query("amount") amount: Int = 50,
     ): ApiQuizz
 
     companion object {

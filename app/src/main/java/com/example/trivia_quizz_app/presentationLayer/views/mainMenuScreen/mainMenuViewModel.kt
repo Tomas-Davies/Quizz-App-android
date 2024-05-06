@@ -1,45 +1,70 @@
 package com.example.trivia_quizz_app.presentationLayer.views.mainMenuScreen
 
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
+import com.example.trivia_quizz_app.dataLayer.entities.relations.UserQuizzWithQuestions
+import com.example.trivia_quizz_app.presentationLayer.states.MainMenuState
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MainMenuViewModel(private val repository: QuizzRepository): ViewModel() {
-    var quizzes by mutableStateOf(repository.getQuizzes().sortedBy { quizz -> !quizz.quizz.isFavourited })
-        private set
+    private val _quizzes: MutableStateFlow<List<UserQuizzWithQuestions>> = MutableStateFlow(emptyList())
+    val quizzes = _quizzes.asStateFlow()
+
+    private val _menuState = MutableStateFlow<MainMenuState>(MainMenuState.Loading)
+    val menuState: StateFlow<MainMenuState> = _menuState.asStateFlow()
 
     init {
-        fillDefaultData()
-    }
-
-    fun update(quizz: Quizz): Int {
-        val result = repository.update(quizz)
-        loadQuizzes()
-        return result
-    }
-
-    private fun fillDefaultData(){
-        if (quizzes.isEmpty()) {
-            repository.fillDefaultData()
-            loadQuizzes()
+        viewModelScope.launch {
+            fetchQuizzes()
+            defaultQuizzesInit()
         }
     }
 
-    fun loadQuizzes(){
-        quizzes = repository.getQuizzes().sortedBy { quizz -> !quizz.quizz.isFavourited }
+
+    private suspend fun defaultQuizzesInit(){
+        try {
+            if (quizzes.value.isEmpty()) {
+                repository.fillDefaultData()
+                fetchLocalData()
+            }
+        } catch (e: Exception){
+            _menuState.value = MainMenuState.Error(R.string.quiz_loading_error)
+        }
     }
 
-    fun deleteQuiz(quizz: Quizz){
-        repository.deleteQuizz(quizz)
+    fun fetchQuizzes(){
+        viewModelScope.launch {
+            fetchLocalData()
+            _menuState.value = MainMenuState.ShowingQuizzes
+        }
     }
 
+    private suspend fun fetchLocalData(){
+        _quizzes.value = repository.getQuizzes().sortedBy { quizz -> !quizz.quizz.isFavourited }
+    }
+
+
+    fun deleteQuizz(quizz: Quizz){
+        viewModelScope.launch {
+            repository.deleteQuizz(quizz)
+            fetchQuizzes()
+        }
+    }
+
+    fun updateQuizz(quizz: Quizz) {
+        viewModelScope.launch {
+            repository.update(quizz)
+            fetchQuizzes()
+        }
+    }
 }
 
 class MainMenuModelFactory(private val repository: QuizzRepository): ViewModelProvider.Factory {

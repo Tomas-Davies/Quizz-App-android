@@ -15,7 +15,7 @@
     <string name="create_quizz_question_error">Kvíz musí obsahovat alespoň 1 otázku.</string>
     <string name="quiz_next">Další</string>
     <string name="quiz_finish">Konec</string>
-    <string name="quiz_api_error">Chyba načítání dat</string>
+    <string name="quiz_loading_error">Chyba načítání dat</string>
     <string name="create_quizz_name_taken_error">Jméno kvízu je obsazené.</string>
     <string name="quiz_result">Zobrazit výsledek</string>
     <string name="quiz_result_correct">"Správné odpovědi: "</string>

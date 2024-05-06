@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.trivia_quizz_app.R
+import com.example.trivia_quizz_app.presentationLayer.states.QuizzState
 import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,16 +20,6 @@ data class QuizzData(
     val incorrectAnswers: List<String>
 )
 
-sealed class QuizzState {
-    data object Loading: QuizzState()
-    data class Question(
-        val questionText: String,
-        val answers: List<String>,
-        val correctAnswerIndex: Int
-    ) : QuizzState()
-    data class Error(val messageId: Int): QuizzState()
-    data object Finished: QuizzState()
-}
 
 class QuizzViewModel(
     private val localRepository: QuizzRepository,
@@ -41,8 +32,7 @@ class QuizzViewModel(
     val quizzState: StateFlow<QuizzState> = _quizzState.asStateFlow()
 
     private var currentRound = 0
-    lateinit var quizzData: List<QuizzData>
-        private set
+    private lateinit var quizzData: List<QuizzData>
 
     private val _showNextButton = MutableStateFlow(false)
     val showNextButton: StateFlow<Boolean> = _showNextButton.asStateFlow()
@@ -78,7 +68,7 @@ class QuizzViewModel(
                 quizzData = data
                 startQuizz()
             } catch (e: Exception) {
-                _quizzState.value = QuizzState.Error(R.string.quiz_api_error)
+                _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
             }
         }
     }
@@ -94,9 +84,12 @@ class QuizzViewModel(
         } ?: emptyList()
     }
 
-    private suspend fun fetchApiData(): List<QuizzData> {
+    private suspend fun fetchApiData(): List<QuizzData>
+    {
         val apiQuizz = apiRepository.getQuizz(category)
-        return apiQuizz.results.map { question ->
+        val allData = apiQuizz.results.shuffled()
+        val data = allData.subList(0,10)
+        return data.map { question ->
             QuizzData(
                 question = question.question.parseHtmlString(),
                 correctAnswer = question.correct_answer.parseHtmlString(),
@@ -121,7 +114,7 @@ class QuizzViewModel(
                 correctAnswerIndex = correctIndex
             )
         } else {
-            _quizzState.value = QuizzState.Error(R.string.quiz_api_error)
+            _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
         }
     }
 
@@ -175,10 +168,13 @@ class QuizzViewModel(
     }
 
     fun setDefaultColors(defaultBtnColor: Color){
-        btnColors[0].value = defaultBtnColor
-        btnColors[1].value = defaultBtnColor
-        btnColors[2].value = defaultBtnColor
-        btnColors[3].value = defaultBtnColor
+        val currentState = _quizzState.value
+        if (currentState is QuizzState.Question) {
+            btnColors[0].value = defaultBtnColor
+            btnColors[1].value = defaultBtnColor
+            btnColors[2].value = defaultBtnColor
+            btnColors[3].value = defaultBtnColor
+        }
     }
 
     fun getScore(): Int {

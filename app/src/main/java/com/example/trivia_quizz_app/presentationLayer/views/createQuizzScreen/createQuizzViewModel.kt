@@ -2,10 +2,12 @@ package com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.trivia_quizz_app.dataLayer.MyConstants
 import com.example.trivia_quizz_app.dataLayer.entities.QuestionAAnswers
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
+import kotlinx.coroutines.launch
 
 class CreateQuizzViewModel(private val repository: QuizzRepository): ViewModel(){
 
@@ -18,13 +20,14 @@ class CreateQuizzViewModel(private val repository: QuizzRepository): ViewModel()
     }
 
     fun addQuizzToRepository(){
-        val quizz = Quizz(quizzName)
-        repository.insertQuizz(quizz, questions)
+        viewModelScope.launch {
+            val quizz = Quizz(quizzName)
+            repository.insertQuizz(quizz, questions)
+        }
     }
 
     fun nameIsAvailable(name: String): Boolean {
-        val nameAvailable = (repository.getQuizzByName(name) == null)
-        return nameAvailable
+        return (repository.getQuizzByName(name) == null)
     }
 
     fun checkQuestionsInput(input: List<String>): Boolean {

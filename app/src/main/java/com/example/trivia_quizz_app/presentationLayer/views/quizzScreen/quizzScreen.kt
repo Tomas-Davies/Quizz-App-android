@@ -29,7 +29,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -66,6 +65,9 @@ import androidx.lifecycle.LifecycleOwner
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.RetrofitInstance
+import com.example.trivia_quizz_app.presentationLayer.components.ErrorView
+import com.example.trivia_quizz_app.presentationLayer.components.LoadingView
+import com.example.trivia_quizz_app.presentationLayer.states.QuizzState
 import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.ui.theme.AppTheme
 
@@ -103,7 +105,6 @@ fun QuizScreenContent(viewModel: QuizzViewModel) {
     val ctx = LocalContext.current
     val buttonColors = viewModel.btnColors.map { color -> color.collectAsState() }
     val defaultBtnColor = MaterialTheme.colorScheme.primary
-    viewModel.setDefaultColors(defaultBtnColor)
 
     Scaffold(
         topBar = {
@@ -132,6 +133,7 @@ fun QuizScreenContent(viewModel: QuizzViewModel) {
                     }
                     is QuizzState.Question -> {
                         val currentState = quizState as QuizzState.Question
+                        viewModel.setDefaultColors(defaultBtnColor)
                         QuizzQuestionView(
                             questionText = currentState.questionText,
                             answers = currentState.answers,
@@ -151,16 +153,6 @@ fun QuizScreenContent(viewModel: QuizzViewModel) {
             }
         }
 
-    }
-}
-
-@Composable
-fun LoadingView() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
     }
 }
 
@@ -378,19 +370,6 @@ fun ResultRow(name: String, data: String){
         Text(
             text = data,
             fontSize = 24.sp
-        )
-    }
-}
-
-@Composable
-fun ErrorView(errorMessage: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Error: $errorMessage",
-            color = MaterialTheme.colorScheme.error
         )
     }
 }
