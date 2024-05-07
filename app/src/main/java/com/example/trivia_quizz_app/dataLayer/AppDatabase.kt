@@ -12,7 +12,7 @@ import com.example.trivia_quizz_app.dataLayer.entities.Quizz
         Quizz::class,
         QuestionAAnswers::class,
     ],
-    version = 4
+    version = 7
 )
 abstract class AppDatabase: RoomDatabase() {
     abstract fun quizzDao(): QuizzDao

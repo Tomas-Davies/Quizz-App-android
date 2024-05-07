@@ -26,6 +26,10 @@ class QuizzRepository(private val quizzDao: QuizzDao) {
             Quizz(quizzName = "sport", image = R.drawable.sport_icon, category = MyConstants.SPORTS),
             Quizz(quizzName = "animals", image = R.drawable.animals_icon, category = MyConstants.ANIMALS),
             Quizz(quizzName = "movies", image = R.drawable.movies_icon, category = MyConstants.MOVIES),
+            Quizz(quizzName = "geography", image = R.drawable.geography_icon, category = MyConstants.GEOGRAPHY),
+            Quizz(quizzName = "games", image = R.drawable.game_icon, category = MyConstants.VIDEO_GAMES),
+            Quizz(quizzName = "music", image = R.drawable.music_icon, category = MyConstants.MUSIC),
+            Quizz(quizzName = "computers", image = R.drawable.computer_icon, category = MyConstants.COMPUTERS),
             Quizz(quizzName = "MIX", image = R.drawable.mix_icon, category = MyConstants.MIX)
         )
         quizzDao.insertQuizzes(defaultQuizzes)

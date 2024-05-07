@@ -144,12 +144,11 @@ private fun MainMenu(viewModel: MainMenuViewModel, padding: PaddingValues){
     val quizzesAndQuestions = viewModel.quizzes.collectAsStateWithLifecycle().value
 
     LazyVerticalGrid(
-        modifier = Modifier.padding(18.dp, padding.calculateTopPadding(), 18.dp, 0.dp),
+        modifier = Modifier.padding(18.dp, padding.calculateTopPadding(), 18.dp, 9.dp),
         horizontalArrangement = Arrangement.spacedBy(36.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
         columns = GridCells.Adaptive(100.dp),
     ) {
-
         items(quizzesAndQuestions){ quizzAndQuestions ->
             key(quizzAndQuestions.quizz.quizzName) {
                 QuizzCard(quizzAndQuestions.quizz, viewModel)

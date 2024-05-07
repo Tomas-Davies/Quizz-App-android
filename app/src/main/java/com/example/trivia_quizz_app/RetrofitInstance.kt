@@ -1,5 +1,6 @@
 package com.example.trivia_quizz_app
 
+import com.example.trivia_quizz_app.dataLayer.QuickChartApi
 import com.example.trivia_quizz_app.dataLayer.TriviaApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -23,4 +24,11 @@ object RetrofitInstance {
         .client(client)
         .build()
         .create(TriviaApi::class.java)
+
+    val quickChartApi: QuickChartApi = Retrofit.Builder()
+        .addConverterFactory(GsonConverterFactory.create())
+        .baseUrl(QuickChartApi.QUICKCHART_BASE_URL)
+        .client(client)
+        .build()
+        .create(QuickChartApi::class.java)
 }

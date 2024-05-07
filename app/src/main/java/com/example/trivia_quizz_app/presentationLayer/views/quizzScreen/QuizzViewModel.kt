@@ -1,6 +1,7 @@
 package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
 import android.text.Html
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -10,10 +11,18 @@ import com.example.trivia_quizz_app.dataLayer.SharedPreferencesManager
 import com.example.trivia_quizz_app.presentationLayer.states.QuizzState
 import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
+import com.google.mlkit.common.model.DownloadConditions
+import com.google.mlkit.nl.translate.TranslateLanguage
+import com.google.mlkit.nl.translate.Translation
+import com.google.mlkit.nl.translate.Translator
+import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.Locale
+import kotlin.coroutines.resume
 
 data class QuizzData(
     val question: String,
@@ -23,6 +32,7 @@ data class QuizzData(
 
 
 class QuizzViewModel(
+    var hasInternetConnection: Boolean,
     private val localRepository: QuizzRepository,
     private val apiRepository: ApiQuizzRepository,
     val quizzName: String,
@@ -63,19 +73,67 @@ class QuizzViewModel(
         MutableStateFlow(Color.Unspecified),MutableStateFlow(Color.Unspecified)
     )
 
+    private lateinit var englishToCzechTranslator: Translator
+
     init {
-        fetchData()
+        prepareViewModel()
+    }
+
+    fun prepareViewModel() {
+        val czechLangOnDevice = Locale.getDefault().language == "cs"
+        if (czechLangOnDevice){
+            if (hasInternetConnection) {
+                prepareMlKit()
+            }
+            else {
+                _quizzState.value = QuizzState.NoInternetConnection
+            }
+        }
+        else {
+            fetchData()
+        }
+    }
+
+    private fun prepareMlKit() {
+        val options = TranslatorOptions.Builder()
+            .setSourceLanguage(TranslateLanguage.ENGLISH)
+            .setTargetLanguage(TranslateLanguage.CZECH)
+            .build()
+        englishToCzechTranslator = Translation.getClient(options)
+
+        val conditions = DownloadConditions.Builder()
+            .requireWifi()
+            .build()
+        _quizzState.value = QuizzState.DownloadingLangModel
+        englishToCzechTranslator.downloadModelIfNeeded(conditions)
+            .addOnSuccessListener {
+                _quizzState.value = QuizzState.Loading
+                fetchData()
+            }
+            .addOnFailureListener {
+                _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
+            }
     }
 
     private fun fetchData() {
         viewModelScope.launch {
             try {
-                val data = if (isUserCreated) fetchLocalData() else fetchApiData()
+                var data: List<QuizzData> = emptyList()
+                if (isUserCreated){
+                    data = fetchLocalData()
+                }
+                else if (hasInternetConnection){
+                    data = fetchApiData()
+                }
+                else {
+                    _quizzState.value = QuizzState.NoInternetConnection
+                }
                 quizzData = data
                 _questionCount.value = data.size
                 startQuizz()
             } catch (e: Exception) {
                 _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
+                Log.e("QuizzDataFetch", "${e.message}")
             }
         }
     }
@@ -94,19 +152,46 @@ class QuizzViewModel(
     private suspend fun fetchApiData(): List<QuizzData>
     {
         val apiQuizz = apiRepository.getQuizz(category)
-        val allData = apiQuizz.results.shuffled()
-        val data = allData.subList(0,10)
-        return data.map { question ->
-            QuizzData(
-                question = question.question.parseHtmlString(),
-                correctAnswer = question.correct_answer.parseHtmlString(),
-                incorrectAnswers = question.incorrect_answers.map { answer -> answer.parseHtmlString() }
-            )
+        val allData = apiQuizz.results.shuffled().filter { data ->
+            data.correct_answer.length < 32 && data.incorrect_answers.find { text -> text.length > 32 } == null
         }
+        val data = allData.subList(0,10)
+        val processedData: List<QuizzData>
+
+        if (Locale.getDefault().language == "cs") {
+           processedData = data.map { question ->
+                QuizzData(
+                    question = question.question.parseHtmlString().translateToCzech(),
+                    correctAnswer = question.correct_answer.parseHtmlString().translateToCzech(),
+                    incorrectAnswers = question.incorrect_answers.map { answer ->
+                        answer.parseHtmlString().translateToCzech()
+                    }
+                )
+            }
+            englishToCzechTranslator.close()
+        } else {
+            processedData = data.map { question ->
+                QuizzData(
+                    question = question.question.parseHtmlString(),
+                    correctAnswer = question.correct_answer.parseHtmlString(),
+                    incorrectAnswers = question.incorrect_answers.map { answer -> answer.parseHtmlString() }
+                )
+            }
+        }
+        return processedData
     }
 
-    private fun String.parseHtmlString(): String{
+    private fun String.parseHtmlString(): String {
         return Html.fromHtml(this, Html.FROM_HTML_MODE_LEGACY).toString()
+    }
+
+    private suspend fun String.translateToCzech(): String {
+        return suspendCancellableCoroutine { continuation ->
+            englishToCzechTranslator.translate(this)
+                .addOnSuccessListener { translatedText ->
+                    continuation.resume(translatedText)
+                }
+        }
     }
 
     private fun startQuizz() {
@@ -228,6 +313,7 @@ class QuizzViewModel(
 
 
 class QuizzModelFactory(
+    private val hasInternetConnection: Boolean,
     private val repository: QuizzRepository,
     private val apiRepository: ApiQuizzRepository,
     private val quizzName: String,
@@ -237,7 +323,7 @@ class QuizzModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(QuizzViewModel::class.java)){
             @Suppress("UNCHECKED_CAST")
-            return QuizzViewModel(repository, apiRepository, quizzName, isUserCreated, category) as T
+            return QuizzViewModel(hasInternetConnection, repository, apiRepository, quizzName, isUserCreated, category) as T
         }
         throw IllegalArgumentException("Unknown VieModel class")
     }

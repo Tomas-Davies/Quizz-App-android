@@ -24,4 +24,6 @@
     <string name="statistics_completed_quizzes">"Dokončeno: "</string>
     <string name="statistics_success_rate">"Úspěšnost: "</string>
     <string name="statistics">Statistiky</string>
+    <string name="no_internet_conn">Bez připojení k internetu</string>
+    <string name="try_again">Zkusit znovu</string>
 </resources>

@@ -2,6 +2,9 @@ package com.example.trivia_quizz_app.presentationLayer.views.quizzScreen
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -66,7 +70,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.RetrofitInstance
-import com.example.trivia_quizz_app.dataLayer.SharedPreferencesManager
 import com.example.trivia_quizz_app.presentationLayer.components.ErrorView
 import com.example.trivia_quizz_app.presentationLayer.components.LoadingView
 import com.example.trivia_quizz_app.presentationLayer.components.ResultRow
@@ -85,6 +88,7 @@ class QuizzScreen : AppCompatActivity() {
 
         val viewModel: QuizzViewModel by viewModels {
             QuizzModelFactory(
+                isInternetAvailable(this),
                 (application as QuizzApp).quizzRepo,
                 ApiQuizzRepository(RetrofitInstance.triviaApi),
                 quizzName,
@@ -140,6 +144,12 @@ fun QuizzScreenContent(viewModel: QuizzViewModel) {
                 when (quizState) {
                     is QuizzState.Loading -> {
                         LoadingView()
+                    }
+                    is QuizzState.NoInternetConnection -> {
+                        NoInternetConnectionView(viewModel)
+                    }
+                    is QuizzState.DownloadingLangModel -> {
+                        DownloadingLangModel()
                     }
                     is QuizzState.Question -> {
                         val currentState = quizState as QuizzState.Question
@@ -316,19 +326,24 @@ fun FinishedView(viewModel: QuizzViewModel) {
             modifier = Modifier.width(width)
         )
 
-        Column(
-            modifier = Modifier.width(width),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            val label1 = stringResource(id = R.string.quiz_result_correct)
+        ElevatedCard {
+            Column(
+                modifier = Modifier
+                    .width(width)
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                val label1 = stringResource(id = R.string.quiz_result_correct)
 
-            ResultRow(name = label1, data = viewModel.correctCount.toString())
-            val label2 = stringResource(id = R.string.quiz_result_wrong)
-            ResultRow(name = label2, data = viewModel.wrongCount.toString())
-            val label3 = stringResource(id = R.string.quiz_result_max_streak)
-            ResultRow(name = label3, data = viewModel.maxStreak.toString())
+                ResultRow(name = label1, data = viewModel.correctCount.toString())
+                val label2 = stringResource(id = R.string.quiz_result_wrong)
+                ResultRow(name = label2, data = viewModel.wrongCount.toString())
+                val label3 = stringResource(id = R.string.quiz_result_max_streak)
+                ResultRow(name = label3, data = viewModel.maxStreak.toString())
+            }
         }
+
 
         Button(onClick = { (ctx as Activity).finish() }) {
             Text(stringResource(id = R.string.quiz_finish))
@@ -400,5 +415,55 @@ private fun StreakIndicator(count: Int, textSize: TextUnit = TextUnit.Unspecifie
             painter = painterResource(id = flameDrawableId),
             contentDescription = "Streak",
             modifier = Modifier.size(imageSize))
+    }
+}
+
+@Composable
+fun NoInternetConnectionView(viewModel: QuizzViewModel) {
+    val ctx = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(18.dp),
+    ) {
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(text = stringResource(id = R.string.no_internet_conn))
+        }
+
+        Button(
+            onClick = {
+                viewModel.hasInternetConnection = isInternetAvailable(ctx)
+                viewModel.prepareViewModel()
+                      },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Text(text = stringResource(id = R.string.try_again))
+        }
+    }
+}
+
+@Composable
+private fun DownloadingLangModel(){
+    LoadingView(message = "Stahuji překladač do češtiny")
+}
+
+fun isInternetAvailable(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    val network = connectivityManager.activeNetwork ?: return false
+    val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+    return when {
+        activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+        activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+        activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+        else -> false
     }
 }

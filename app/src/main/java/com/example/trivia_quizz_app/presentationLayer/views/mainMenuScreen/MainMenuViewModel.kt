@@ -1,6 +1,7 @@
 package com.example.trivia_quizz_app.presentationLayer.views.mainMenuScreen
 
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -38,6 +39,7 @@ class MainMenuViewModel(private val repository: QuizzRepository): ViewModel() {
             }
         } catch (e: Exception){
             _menuState.value = MainMenuState.Error(R.string.quiz_loading_error)
+            Log.w("UNGULEBEBEEEEEEEE", "${e.message}")
         }
     }
 
