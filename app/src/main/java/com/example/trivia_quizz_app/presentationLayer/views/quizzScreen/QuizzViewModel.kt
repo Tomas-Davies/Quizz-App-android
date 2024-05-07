@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.trivia_quizz_app.R
+import com.example.trivia_quizz_app.dataLayer.SharedPreferencesManager
 import com.example.trivia_quizz_app.presentationLayer.states.QuizzState
 import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.repositoryLayer.QuizzRepository
@@ -31,8 +32,12 @@ class QuizzViewModel(
     private val _quizzState = MutableStateFlow<QuizzState>(QuizzState.Loading)
     val quizzState: StateFlow<QuizzState> = _quizzState.asStateFlow()
 
-    private var currentRound = 0
-    private lateinit var quizzData: List<QuizzData>
+    private var _currentRound = 0
+
+    lateinit var quizzData: List<QuizzData>
+
+    private val _questionCount = MutableStateFlow(0)
+    val questionCount = _questionCount.asStateFlow()
 
     private val _showNextButton = MutableStateFlow(false)
     val showNextButton: StateFlow<Boolean> = _showNextButton.asStateFlow()
@@ -51,6 +56,7 @@ class QuizzViewModel(
     var correctCount = 0
     var wrongCount = 0
     var maxStreak = 0
+    val currentRound = MutableStateFlow(1)
 
     val btnColors: List<MutableStateFlow<Color>> = listOf(
         MutableStateFlow(Color.Unspecified),MutableStateFlow(Color.Unspecified),
@@ -66,6 +72,7 @@ class QuizzViewModel(
             try {
                 val data = if (isUserCreated) fetchLocalData() else fetchApiData()
                 quizzData = data
+                _questionCount.value = data.size
                 startQuizz()
             } catch (e: Exception) {
                 _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
@@ -104,7 +111,7 @@ class QuizzViewModel(
 
     private fun startQuizz() {
         if (quizzData.isNotEmpty()) {
-            val question = quizzData[currentRound]
+            val question = quizzData[_currentRound]
             val answers = (question.incorrectAnswers + question.correctAnswer).shuffled()
             val correctIndex = answers.indexOf(question.correctAnswer)
 
@@ -135,15 +142,15 @@ class QuizzViewModel(
                 wrongCount++
                 _streak.value = 0
             }
-            nextRound()
+            showNextBtn()
         }
     }
 
-    private fun nextRound(){
+    private fun showNextBtn(){
         val currentState = _quizzState.value
         if (currentState is QuizzState.Question) {
-            currentRound++
-            if (currentRound < quizzData.size) {
+            _currentRound++
+            if (_currentRound < quizzData.size) {
                 _showNextButton.value = true
             } else {
                 _showFinishButton.value = true
@@ -154,6 +161,7 @@ class QuizzViewModel(
     fun onNextClicked(){
         val currentState = _quizzState.value
         if (currentState is QuizzState.Question) {
+            currentRound.value++
             _inputEnabled.value = true
             startQuizz()
             _showNextButton.value = false
@@ -174,6 +182,39 @@ class QuizzViewModel(
             btnColors[1].value = defaultBtnColor
             btnColors[2].value = defaultBtnColor
             btnColors[3].value = defaultBtnColor
+        }
+    }
+
+    fun updateAllTotalResultData(){
+        viewModelScope.launch {
+            val currentState = _quizzState.value
+            if (currentState is QuizzState.Finished){
+                totalResultDataInc("TOTAL_COMPLETED")
+                totalResultDataInc("TOTAL_ANSWERED_CORRECTLY", correctCount)
+                totalResultDataInc("TOTAL_ANSWERED_WRONG", wrongCount)
+                updateTotalSuccessRate()
+                updateTotalMaxStreak()
+            }
+        }
+    }
+
+    private fun totalResultDataInc(prefName: String, inc: Int = 1){
+        val oldValue = SharedPreferencesManager.getInt(prefName, 0)
+        SharedPreferencesManager.saveInt(prefName, oldValue + inc)
+    }
+
+    private fun updateTotalSuccessRate(){
+        val answeredWrong = SharedPreferencesManager.getInt("TOTAL_ANSWERED_WRONG", 1)
+        val answeredCorrect = SharedPreferencesManager.getInt("TOTAL_ANSWERED_CORRECTLY", 1)
+        val allAnswers = answeredCorrect + answeredWrong
+        val percentage = (answeredCorrect * 100) / allAnswers
+        SharedPreferencesManager.saveInt("TOTAL_SUCCESS_RATE",  percentage)
+    }
+
+    private fun updateTotalMaxStreak(){
+        val oldMaxStreak = SharedPreferencesManager.getInt("MAX_STREAK", 0)
+        if (oldMaxStreak < maxStreak){
+            SharedPreferencesManager.saveInt("MAX_STREAK", maxStreak)
         }
     }
 

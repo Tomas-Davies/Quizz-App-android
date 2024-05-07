@@ -1,6 +1,6 @@
 package com.example.trivia_quizz_app.dataLayer
 
-import com.example.trivia_quizz_app.dataLayer.model.ApiQuizz
+import com.example.trivia_quizz_app.dataLayer.entities.ApiQuizz
 import retrofit2.http.GET
 import retrofit2.http.Query
 

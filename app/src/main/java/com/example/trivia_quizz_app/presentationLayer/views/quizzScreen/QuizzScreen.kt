@@ -36,12 +36,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -62,11 +62,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.RetrofitInstance
+import com.example.trivia_quizz_app.dataLayer.SharedPreferencesManager
 import com.example.trivia_quizz_app.presentationLayer.components.ErrorView
 import com.example.trivia_quizz_app.presentationLayer.components.LoadingView
+import com.example.trivia_quizz_app.presentationLayer.components.ResultRow
 import com.example.trivia_quizz_app.presentationLayer.states.QuizzState
 import com.example.trivia_quizz_app.repositoryLayer.ApiQuizzRepository
 import com.example.trivia_quizz_app.ui.theme.AppTheme
@@ -92,7 +95,12 @@ class QuizzScreen : AppCompatActivity() {
 
         setContent {
             AppTheme {
-                QuizScreenContent(viewModel)
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    QuizzScreenContent(viewModel)
+                }
             }
         }
     }
@@ -100,10 +108,10 @@ class QuizzScreen : AppCompatActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuizScreenContent(viewModel: QuizzViewModel) {
-    val quizState by viewModel.quizzState.collectAsState()
+fun QuizzScreenContent(viewModel: QuizzViewModel) {
+    val quizState by viewModel.quizzState.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
-    val buttonColors = viewModel.btnColors.map { color -> color.collectAsState() }
+    val buttonColors = viewModel.btnColors.map { color -> color.collectAsStateWithLifecycle() }
     val defaultBtnColor = MaterialTheme.colorScheme.primary
 
     Scaffold(
@@ -122,11 +130,13 @@ fun QuizScreenContent(viewModel: QuizzViewModel) {
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier.padding(22.dp, 0.dp),
+            modifier = Modifier.padding(22.dp, 0.dp)
         ) {
-            Box(modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
                 when (quizState) {
                     is QuizzState.Loading -> {
                         LoadingView()
@@ -165,17 +175,21 @@ fun QuizzQuestionView(
     defaultBtnColor: Color,
     onAnswerSelected: (Int) -> Unit
 ) {
-    val showFinishedButton = viewModel.showFinishButton.collectAsState()
-    val inputEnabled = viewModel.inputEnabled.collectAsState()
-    val showNextButton = viewModel.showNextButton.collectAsState()
-    val streak = viewModel.streak.collectAsState()
+    val showFinishedButton = viewModel.showFinishButton.collectAsStateWithLifecycle()
+    val inputEnabled = viewModel.inputEnabled.collectAsStateWithLifecycle()
+    val showNextButton = viewModel.showNextButton.collectAsStateWithLifecycle()
+    val streak = viewModel.streak.collectAsStateWithLifecycle()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-
+    val currentRound = viewModel.currentRound.collectAsStateWithLifecycle()
+    val questionCount = viewModel.questionCount.collectAsStateWithLifecycle()
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+
+        Text(text = "${currentRound.value} / ${questionCount.value}")
+        Spacer(modifier = Modifier.height(18.dp))
         ElevatedCard(
             modifier = Modifier
                     .fillMaxWidth()
@@ -214,10 +228,12 @@ fun QuizzQuestionView(
         StreakIndicator(count = streak.value)
         Spacer(modifier = Modifier.height(18.dp))
 
+
         if (showNextButton.value){
-            Button(onClick = {
-                viewModel.onNextClicked()
-                viewModel.setDefaultColors(defaultBtnColor)
+            Button(
+                onClick = {
+                    viewModel.onNextClicked()
+                    viewModel.setDefaultColors(defaultBtnColor)
             }) {
                 Text(text = stringResource(id = R.string.quiz_next))
             }
@@ -269,7 +285,8 @@ fun AnswerButton(
 @Composable
 fun FinishedView(viewModel: QuizzViewModel) {
     val ctx = LocalContext.current
-    val medalLimit = viewModel.medalLimit.collectAsState().value
+    val medalLimit = viewModel.medalLimit.collectAsStateWithLifecycle().value
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -305,6 +322,7 @@ fun FinishedView(viewModel: QuizzViewModel) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             val label1 = stringResource(id = R.string.quiz_result_correct)
+
             ResultRow(name = label1, data = viewModel.correctCount.toString())
             val label2 = stringResource(id = R.string.quiz_result_wrong)
             ResultRow(name = label2, data = viewModel.wrongCount.toString())
@@ -315,6 +333,8 @@ fun FinishedView(viewModel: QuizzViewModel) {
         Button(onClick = { (ctx as Activity).finish() }) {
             Text(stringResource(id = R.string.quiz_finish))
         }
+
+        viewModel.updateAllTotalResultData()
     }
 }
 
@@ -357,22 +377,6 @@ fun ResultProgressBar(
     }
 }
 
-@Composable
-fun ResultRow(name: String, data: String){
-    Row (
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ){
-        Text(
-            text = name,
-            fontSize = 24.sp
-        )
-        Text(
-            text = data,
-            fontSize = 24.sp
-        )
-    }
-}
 
 
 @Composable

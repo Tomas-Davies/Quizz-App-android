@@ -1,4 +1,5 @@
-package com.example.trivia_quizz_app.dataLayer.model
+package com.example.trivia_quizz_app.dataLayer.entities
+
 
 data class ApiQuizz(
     val response_code: Int,

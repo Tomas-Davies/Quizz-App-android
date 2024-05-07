@@ -56,9 +56,9 @@ dependencies {
     val kspVersion = "2.5.0"
     ksp("androidx.room:room-compiler:$kspVersion")
 
-    // ViewModel & LiveData
+    // ViewModel & Flow lifecycles
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.compose.runtime:runtime-livedata:1.6.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
 
     // Retrofit for API
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")

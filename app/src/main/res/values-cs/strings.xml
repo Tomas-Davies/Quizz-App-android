@@ -21,4 +21,7 @@
     <string name="quiz_result_correct">"Správné odpovědi: "</string>
     <string name="quiz_result_wrong">"Špatné odpovědi: "</string>
     <string name="quiz_result_score">Skóre</string>
+    <string name="statistics_completed_quizzes">"Dokončeno: "</string>
+    <string name="statistics_success_rate">"Úspěšnost: "</string>
+    <string name="statistics">Statistiky</string>
 </resources>

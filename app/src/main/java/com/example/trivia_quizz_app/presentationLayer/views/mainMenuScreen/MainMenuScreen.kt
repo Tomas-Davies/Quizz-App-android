@@ -29,13 +29,13 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
@@ -59,6 +60,7 @@ import com.example.trivia_quizz_app.presentationLayer.components.LoadingView
 import com.example.trivia_quizz_app.presentationLayer.states.MainMenuState
 import com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen.CreateQuizzScreen
 import com.example.trivia_quizz_app.presentationLayer.views.quizzScreen.QuizzScreen
+import com.example.trivia_quizz_app.presentationLayer.views.statsScreen.StatsScreen
 import com.example.trivia_quizz_app.ui.theme.AppTheme
 
 
@@ -87,7 +89,7 @@ class MainMenuScreen: AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1){
             if (resultCode == Activity.RESULT_OK){
-                viewModel.fetchQuizzes()
+                viewModel.fetchLocalData()
             }
         }
     }
@@ -97,13 +99,21 @@ class MainMenuScreen: AppCompatActivity() {
 @Composable
 private fun MenuScreenContent(viewModel: MainMenuViewModel){
     val ctx = LocalContext.current
-    val menuState by viewModel.menuState.collectAsState()
+    val menuState by viewModel.menuState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(id = R.string.quizzes_heading).uppercase())},
-                actions = {}
+                actions = {
+                    IconButton(onClick = { openStatsActivity(ctx) }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.stats_icon),
+                            contentDescription = "Statistics",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -131,7 +141,7 @@ private fun MenuScreenContent(viewModel: MainMenuViewModel){
 
 @Composable
 private fun MainMenu(viewModel: MainMenuViewModel, padding: PaddingValues){
-    val quizzesAndQuestions = viewModel.quizzes.collectAsState().value
+    val quizzesAndQuestions = viewModel.quizzes.collectAsStateWithLifecycle().value
 
     LazyVerticalGrid(
         modifier = Modifier.padding(18.dp, padding.calculateTopPadding(), 18.dp, 0.dp),
@@ -249,5 +259,10 @@ fun openQuizzActivity(ctx: Context, quizName: String, isUserCreated: Boolean = f
     intent.putExtra("quizzName", quizName)
     intent.putExtra("isUserCreated", isUserCreated)
     intent.putExtra("quizzCategory", quizCat)
+    ctx.startActivity(intent)
+}
+
+fun openStatsActivity(ctx: Context){
+    val intent = Intent(ctx, StatsScreen::class.java)
     ctx.startActivity(intent)
 }

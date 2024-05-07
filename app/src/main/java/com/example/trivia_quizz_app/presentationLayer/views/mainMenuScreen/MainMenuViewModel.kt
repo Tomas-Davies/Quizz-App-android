@@ -23,8 +23,9 @@ class MainMenuViewModel(private val repository: QuizzRepository): ViewModel() {
 
     init {
         viewModelScope.launch {
-            fetchQuizzes()
+            fetchLocalData()
             defaultQuizzesInit()
+            _menuState.value = MainMenuState.ShowingQuizzes
         }
     }
 
@@ -40,29 +41,23 @@ class MainMenuViewModel(private val repository: QuizzRepository): ViewModel() {
         }
     }
 
-    fun fetchQuizzes(){
+    fun fetchLocalData(){
         viewModelScope.launch {
-            fetchLocalData()
-            _menuState.value = MainMenuState.ShowingQuizzes
+            _quizzes.value = repository.getQuizzes().sortedBy { quizz -> !quizz.quizz.isFavourited }
         }
     }
-
-    private suspend fun fetchLocalData(){
-        _quizzes.value = repository.getQuizzes().sortedBy { quizz -> !quizz.quizz.isFavourited }
-    }
-
 
     fun deleteQuizz(quizz: Quizz){
         viewModelScope.launch {
             repository.deleteQuizz(quizz)
-            fetchQuizzes()
+            fetchLocalData()
         }
     }
 
     fun updateQuizz(quizz: Quizz) {
         viewModelScope.launch {
             repository.update(quizz)
-            fetchQuizzes()
+            fetchLocalData()
         }
     }
 }

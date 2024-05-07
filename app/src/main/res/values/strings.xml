@@ -22,4 +22,7 @@
     <string name="quiz_result_streak" translatable="false">Streak</string>
     <string name="quiz_result_max_streak" translatable="false">Max Streak: </string>
     <string name="quiz_result_score">Score</string>
+    <string name="statistics">Statistics</string>
+    <string name="statistics_completed_quizzes">Completed: </string>
+    <string name="statistics_success_rate">Success rate</string>
 </resources>
