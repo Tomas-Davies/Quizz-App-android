@@ -16,7 +16,8 @@
         tools:targetApi="31" >
         <activity
             android:name=".presentationLayer.views.mainMenuScreen.MainMenuScreen"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -24,7 +25,8 @@
         </activity>
         <activity
             android:name=".presentationLayer.views.createQuizzScreen.CreateQuizzScreen"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -32,7 +34,8 @@
         </activity>
         <activity
             android:name=".presentationLayer.views.quizzScreen.QuizzScreen"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -40,7 +43,8 @@
         </activity>
         <activity
             android:name=".presentationLayer.views.statsScreen.StatsScreen"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
