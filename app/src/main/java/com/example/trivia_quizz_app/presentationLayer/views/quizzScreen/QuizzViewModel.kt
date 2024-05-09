@@ -124,6 +124,7 @@ class QuizzViewModel(
                 }
                 else if (hasInternetConnection){
                     data = fetchApiData()
+                    _quizzState.value = QuizzState.Loading
                 }
                 else {
                     _quizzState.value = QuizzState.NoInternetConnection
@@ -159,6 +160,7 @@ class QuizzViewModel(
         val processedData: List<QuizzData>
 
         if (Locale.getDefault().language == "cs") {
+            _quizzState.value = QuizzState.TranslatingText
            processedData = data.map { question ->
                 QuizzData(
                     question = question.question.parseHtmlString().translateToCzech(),

@@ -2,17 +2,20 @@ package com.example.trivia_quizz_app.presentationLayer.views.statsScreen
 
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ElevatedCard
@@ -33,19 +36,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.presentationLayer.components.ResultRow
+import com.example.trivia_quizz_app.repositoryLayer.ApiGraphRepository
 import com.example.trivia_quizz_app.ui.theme.AppTheme
 
 class StatsScreen: AppCompatActivity() {
-    private val viewModel by viewModels<StatsViewModel> {
-        StatsViewModelFactory()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             AppTheme {
+                val darkTheme = isSystemInDarkTheme()
+                val viewModel by viewModels<StatsViewModel> {
+                    StatsViewModelFactory(darkTheme, ApiGraphRepository())
+                }
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -85,8 +92,12 @@ private fun StatsScreenContent(viewModel: StatsViewModel){
 
 @Composable
 fun StatsView(viewModel: StatsViewModel) {
+    val pieGraph = viewModel.pieGraph.collectAsStateWithLifecycle()
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceAround
     ) {
@@ -98,7 +109,7 @@ fun StatsView(viewModel: StatsViewModel) {
             viewModel.successRate < 66 -> R.drawable.silver_trophy
             else -> R.drawable.gold_trophy
         }
-        Log.w("SUUUUUUUUUUUUUUUUUUUUUUUUC", "${viewModel.successRate}")
+
         Image(
             painter = painterResource(id = trophyDrawable),
             contentDescription = "Trophy",
@@ -107,7 +118,7 @@ fun StatsView(viewModel: StatsViewModel) {
         
 
         ElevatedCard {
-            val width = 3 * (screenWidth / 4)
+            val width = 9 * (screenWidth / 10)
 
             Column(
                 modifier = Modifier
@@ -129,6 +140,14 @@ fun StatsView(viewModel: StatsViewModel) {
             }
         }
 
-        //TODO tady dojebat ten graf z api
+
+        if (pieGraph.value != null){
+            AsyncImage(
+                model = pieGraph.value,
+                contentDescription = "Pie Graph",
+                modifier = Modifier.size(screenHeight / 2))
+        } else {
+            Text(text = stringResource(id = R.string.loading_graph))
+        }
     }
 }

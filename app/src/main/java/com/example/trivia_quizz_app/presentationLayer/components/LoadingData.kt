@@ -1,6 +1,7 @@
 package com.example.trivia_quizz_app.presentationLayer.components
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -13,9 +14,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoadingView(message: String = "") {
-    Box(
+    Column(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         CircularProgressIndicator()
         Spacer(modifier = Modifier.height(8.dp))

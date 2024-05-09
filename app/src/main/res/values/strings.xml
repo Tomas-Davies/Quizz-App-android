@@ -27,4 +27,5 @@
     <string name="statistics_success_rate">Success rate</string>
     <string name="no_internet_conn">No internet connection</string>
     <string name="try_again">Try again</string>
+    <string name="loading_graph">Loading graph…</string>
 </resources>

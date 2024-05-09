@@ -1,8 +1,11 @@
 package com.example.trivia_quizz_app.presentationLayer.views.mainMenuScreen
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -51,7 +54,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.trivia_quizz_app.AlarmUtils
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
@@ -62,6 +68,7 @@ import com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen.Cr
 import com.example.trivia_quizz_app.presentationLayer.views.quizzScreen.QuizzScreen
 import com.example.trivia_quizz_app.presentationLayer.views.statsScreen.StatsScreen
 import com.example.trivia_quizz_app.ui.theme.AppTheme
+import java.util.Calendar
 
 
 class MainMenuScreen: AppCompatActivity() {
@@ -82,6 +89,23 @@ class MainMenuScreen: AppCompatActivity() {
                 }
             }
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    101
+                )
+            }
+        }
+        val calendar = Calendar.getInstance()
+        val alarmUtils = AlarmUtils(this)
+        alarmUtils.initRepeatingAlarm(calendar)
     }
 
     @Deprecated("Deprecated in Java")

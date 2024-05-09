@@ -66,6 +66,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.10.0")
 
+    // Coil for api image loading
+    implementation("io.coil-kt:coil-compose:2.3.0")
+
     // Material Design 3
     implementation ("androidx.compose.material3:material3")
     // Android Studio Preview support

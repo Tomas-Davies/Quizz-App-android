@@ -148,8 +148,11 @@ fun QuizzScreenContent(viewModel: QuizzViewModel) {
                     is QuizzState.NoInternetConnection -> {
                         NoInternetConnectionView(viewModel)
                     }
+                    is QuizzState.TranslatingText -> {
+                        LoadingView(message = "Překládám do češtiny") // Aktivni pouze pokud je nastavena cestina
+                    }
                     is QuizzState.DownloadingLangModel -> {
-                        DownloadingLangModel()
+                        LoadingView(message = "Stahuji překladač") // Aktivni pouze pokud je nastavena cestina
                     }
                     is QuizzState.Question -> {
                         val currentState = quizState as QuizzState.Question
@@ -345,11 +348,13 @@ fun FinishedView(viewModel: QuizzViewModel) {
         }
 
 
-        Button(onClick = { (ctx as Activity).finish() }) {
+        Button(
+            onClick = {
+                viewModel.updateAllTotalResultData()
+                (ctx as Activity).finish()
+            }) {
             Text(stringResource(id = R.string.quiz_finish))
         }
-
-        viewModel.updateAllTotalResultData()
     }
 }
 
@@ -447,11 +452,6 @@ fun NoInternetConnectionView(viewModel: QuizzViewModel) {
             Text(text = stringResource(id = R.string.try_again))
         }
     }
-}
-
-@Composable
-private fun DownloadingLangModel(){
-    LoadingView(message = "Stahuji překladač do češtiny")
 }
 
 fun isInternetAvailable(context: Context): Boolean {
