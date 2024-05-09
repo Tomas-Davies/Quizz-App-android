@@ -61,7 +61,6 @@ import com.example.trivia_quizz_app.AlarmUtils
 import com.example.trivia_quizz_app.QuizzApp
 import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
-import com.example.trivia_quizz_app.presentationLayer.components.ErrorView
 import com.example.trivia_quizz_app.presentationLayer.components.LoadingView
 import com.example.trivia_quizz_app.presentationLayer.states.MainMenuState
 import com.example.trivia_quizz_app.presentationLayer.views.createQuizzScreen.CreateQuizzScreen
@@ -154,9 +153,6 @@ private fun MenuScreenContent(viewModel: MainMenuViewModel){
             }
             is MainMenuState.ShowingQuizzes -> {
                 MainMenu(viewModel = viewModel, padding = innerPadding)
-            }
-            is MainMenuState.Error -> {
-                ErrorView(errorMessage = stringResource((menuState as MainMenuState.Error).messageId))
             }
         }
     }

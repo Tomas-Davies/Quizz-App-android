@@ -255,7 +255,6 @@ fun QuizzQuestionView(
         if (showFinishedButton.value) {
             Button(onClick = {
                 viewModel.onFinishClicked()
-            /* TODO prechod na shrnuti kvizu */
             }) {
                 Text(text = stringResource(id = R.string.quiz_result))
             }

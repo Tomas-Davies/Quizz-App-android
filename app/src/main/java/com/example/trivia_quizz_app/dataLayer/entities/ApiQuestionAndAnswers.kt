@@ -6,6 +6,5 @@ data class ApiQuestionAndAnswers(
     val difficulty: String,
     val incorrect_answers: List<String>,
     val question: String,
-    val type: String,
-    // dodelat statistiky
+    val type: String
 )

@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.trivia_quizz_app.R
 import com.example.trivia_quizz_app.dataLayer.entities.Quizz
 import com.example.trivia_quizz_app.dataLayer.entities.relations.UserQuizzWithQuestions
 import com.example.trivia_quizz_app.presentationLayer.states.MainMenuState
@@ -38,8 +37,7 @@ class MainMenuViewModel(private val repository: QuizzRepository): ViewModel() {
                 fetchLocalData()
             }
         } catch (e: Exception){
-            _menuState.value = MainMenuState.Error(R.string.quiz_loading_error)
-            Log.w("UNGULEBEBEEEEEEEE", "${e.message}")
+            Log.w("MainMenuDataFetch", "${e.message}")
         }
     }
 

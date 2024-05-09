@@ -7,7 +7,7 @@ object SharedPreferencesManager {
     private const val PREF_NAME = "MySharedPrefs"
     private lateinit var sharedPreferences: SharedPreferences
 
-    fun init(context: Context) {
+        fun init(context: Context) {
         sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 

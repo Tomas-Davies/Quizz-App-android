@@ -44,7 +44,7 @@ class QuizzViewModel(
 
     private var _currentRound = 0
 
-    lateinit var quizzData: List<QuizzData>
+    private lateinit var quizzData: List<QuizzData>
 
     private val _questionCount = MutableStateFlow(0)
     val questionCount = _questionCount.asStateFlow()
@@ -81,7 +81,7 @@ class QuizzViewModel(
 
     fun prepareViewModel() {
         val czechLangOnDevice = Locale.getDefault().language == "cs"
-        if (czechLangOnDevice){
+        if (czechLangOnDevice && !isUserCreated){
             if (hasInternetConnection) {
                 prepareMlKit()
             }
@@ -118,17 +118,14 @@ class QuizzViewModel(
     private fun fetchData() {
         viewModelScope.launch {
             try {
-                var data: List<QuizzData> = emptyList()
+                val data: List<QuizzData>
                 if (isUserCreated){
                     data = fetchLocalData()
-                }
-                else if (hasInternetConnection){
+                } else {
                     data = fetchApiData()
                     _quizzState.value = QuizzState.Loading
                 }
-                else {
-                    _quizzState.value = QuizzState.NoInternetConnection
-                }
+
                 quizzData = data
                 _questionCount.value = data.size
                 startQuizz()
