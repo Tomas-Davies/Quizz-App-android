@@ -122,8 +122,8 @@ class QuizzViewModel(
                 if (isUserCreated){
                     data = fetchLocalData()
                 } else {
-                    data = fetchApiData()
                     _quizzState.value = QuizzState.Loading
+                    data = fetchApiData()
                 }
 
                 quizzData = data
@@ -149,35 +149,41 @@ class QuizzViewModel(
 
     private suspend fun fetchApiData(): List<QuizzData>
     {
-        val apiQuizz = apiRepository.getQuizz(category)
-        val allData = apiQuizz.results.shuffled().filter { data ->
-            data.correct_answer.length < 32 && data.incorrect_answers.find { text -> text.length > 32 } == null
-        }
-        val data = allData.subList(0,10)
-        val processedData: List<QuizzData>
+        if (hasInternetConnection){
+            val apiQuizz = apiRepository.getQuizz(category)
+            val allData = apiQuizz.results.shuffled().filter { data ->
+                data.correct_answer.length < 32 && data.incorrect_answers.find { text -> text.length > 32 } == null
+            }
+            val data = allData.subList(0,10)
+            val processedData: List<QuizzData>
 
-        if (Locale.getDefault().language == "cs") {
-            _quizzState.value = QuizzState.TranslatingText
-           processedData = data.map { question ->
-                QuizzData(
-                    question = question.question.parseHtmlString().translateToCzech(),
-                    correctAnswer = question.correct_answer.parseHtmlString().translateToCzech(),
-                    incorrectAnswers = question.incorrect_answers.map { answer ->
-                        answer.parseHtmlString().translateToCzech()
-                    }
-                )
+            if (Locale.getDefault().language == "cs") {
+                _quizzState.value = QuizzState.TranslatingText
+                processedData = data.map { question ->
+                    QuizzData(
+                        question = question.question.parseHtmlString().translateToCzech(),
+                        correctAnswer = question.correct_answer.parseHtmlString().translateToCzech(),
+                        incorrectAnswers = question.incorrect_answers.map { answer ->
+                            answer.parseHtmlString().translateToCzech()
+                        }
+                    )
+                }
+                englishToCzechTranslator.close()
+            } else {
+                processedData = data.map { question ->
+                    QuizzData(
+                        question = question.question.parseHtmlString(),
+                        correctAnswer = question.correct_answer.parseHtmlString(),
+                        incorrectAnswers = question.incorrect_answers.map { answer -> answer.parseHtmlString() }
+                    )
+                }
             }
-            englishToCzechTranslator.close()
+            return processedData
         } else {
-            processedData = data.map { question ->
-                QuizzData(
-                    question = question.question.parseHtmlString(),
-                    correctAnswer = question.correct_answer.parseHtmlString(),
-                    incorrectAnswers = question.incorrect_answers.map { answer -> answer.parseHtmlString() }
-                )
-            }
+            _quizzState.value = QuizzState.NoInternetConnection
         }
-        return processedData
+        val myEmptyList: List<QuizzData> = emptyList()
+        return myEmptyList
     }
 
     private fun String.parseHtmlString(): String {
@@ -194,18 +200,21 @@ class QuizzViewModel(
     }
 
     private fun startQuizz() {
-        if (quizzData.isNotEmpty()) {
-            val question = quizzData[_currentRound]
-            val answers = (question.incorrectAnswers + question.correctAnswer).shuffled()
-            val correctIndex = answers.indexOf(question.correctAnswer)
+        val notValidState = _quizzState.value is QuizzState.NoInternetConnection
+        if (!notValidState){
+            if (quizzData.isNotEmpty()) {
+                val question = quizzData[_currentRound]
+                val answers = (question.incorrectAnswers + question.correctAnswer).shuffled()
+                val correctIndex = answers.indexOf(question.correctAnswer)
 
-            _quizzState.value = QuizzState.Question(
-                questionText = question.question,
-                answers = answers,
-                correctAnswerIndex = correctIndex
-            )
-        } else {
-            _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
+                _quizzState.value = QuizzState.Question(
+                    questionText = question.question,
+                    answers = answers,
+                    correctAnswerIndex = correctIndex
+                )
+            } else {
+                _quizzState.value = QuizzState.Error(R.string.quiz_loading_error)
+            }
         }
     }
 
